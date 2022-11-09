@@ -34,7 +34,7 @@ declare global {
       IMAGE: AttributesWithChildren<ImageAttributes>;
       TEXTINPUT: AttributesWithChildren<{ style?: TextStyle }>;
       PICKERINTERNAL: AttributesWithChildren<{ style?: ViewStyle }>;
-      BUTTON: AttributesWithChildren<{ style?: ViewStyle }>;
+      BUTTON: AttributesWithChildren<{ style?: ViewStyle; title?: string }>;
     }
   }
 }

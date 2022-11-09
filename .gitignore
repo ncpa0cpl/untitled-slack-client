@@ -4,3 +4,5 @@ dist
 yarn-error.log
 .npmrc
 bin
+.yarn/cache
+.yarn/install-state.gz

@@ -1,0 +1,30 @@
+diff --git a/bin/backends/qt.js b/bin/backends/qt.js
+index 858ea7ba67e28b253804bc181acaa8d3857fa43a..34d8e87959acec65caec027a3fb46707c33cceaf 100644
+--- a/bin/backends/qt.js
++++ b/bin/backends/qt.js
+@@ -26,16 +26,21 @@ class BaseElement {
+         if (!this.hasMouseTracking()) {
+             this.setMouseTracking(true);
+         }
+-        this.element.mouseMoveEvent(func);
++
++        if(this.element.mouseMoveEvent)
++            this.element.mouseMoveEvent(func);
+     }
+     enterEvent(func) {
+-        this.element.enterEvent(func);
++        if(this.element.enterEvent)
++            this.element.enterEvent(func);
+     }
+     leaveEvent(func) {
+-        this.element.leaveEvent(func);
++        if(this.element.leaveEvent)
++            this.element.leaveEvent(func);
+     }
+     moveEvent(func) {
+-        this.element.moveEvent(func);
++        if(this.element.moveEvent)
++            this.element.moveEvent(func);
+     }
+     setStyleSheet(obj) {
+         this.element.setStyleSheet(convertStyleSheet_1.default(obj));

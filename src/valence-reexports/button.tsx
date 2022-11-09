@@ -5,6 +5,9 @@ import type { ViewStyle } from "../stylesheets/typings";
 export interface ButtonProps {
   style?: ViewStyle;
   onPress?: () => void;
+  children?: string;
 }
 
-export const Button = (props: ButtonProps) => <VButton {...props} />;
+export const Button = ({ children, ...props }: ButtonProps) => (
+  <VButton {...props} title={children} />
+);

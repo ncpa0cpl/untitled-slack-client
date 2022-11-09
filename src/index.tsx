@@ -1,6 +1,7 @@
 import React from "react";
 import { AppRegistry } from "valence-native";
 import { Main } from "./main";
+import "./quarks/settings";
 
 AppRegistry.registerComponent("client", (<Main />) as any);
 
