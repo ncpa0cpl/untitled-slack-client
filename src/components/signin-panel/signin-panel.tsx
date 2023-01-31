@@ -1,10 +1,15 @@
 import React from "react";
+import {
+  Box,
+  Button,
+  Label,
+  Markup,
+  Orientation,
+  Span,
+  TextInput,
+} from "react-gjs-renderer";
 import { AuthorizationAdapter } from "../../adapters/authorization/authorization-adapter";
 import { UserQuark } from "../../quarks/user";
-import { Button } from "../../valence-reexports/button";
-import { Text } from "../../valence-reexports/text";
-import { TextInput } from "../../valence-reexports/text-input";
-import { View } from "../../valence-reexports/view";
 
 export const SignInPanel = () => {
   const currentUser = UserQuark.use();
@@ -14,35 +19,44 @@ export const SignInPanel = () => {
   const [team, setTeam] = React.useState("");
 
   return (
-    <View>
+    <Box orientation={Orientation.VERTICAL}>
       {currentUser.value.loggedIn ? (
-        <View>
-          <Text>You are logged in!</Text>
+        <>
+          <Markup>
+            <Span fontSize={24}>You are logged in!</Span>
+          </Markup>
           <Button
-            onPress={() => {
+            onClick={() => {
               // AuthorizationAdapter.signOut();
             }}
           >
             Logout
           </Button>
-        </View>
+        </>
       ) : (
-        <View>
-          <Text>Team:</Text>
-          <TextInput value={team} onChangeText={(v) => setTeam(v)} />
-          <Text>Email:</Text>
-          <TextInput value={email} onChangeText={(v) => setEmail(v)} />
-          <Text>Password:</Text>
-          <TextInput value={password} onChangeText={(v) => setPassword(v)} />
+        <>
+          <Label>Team:</Label>
+          <TextInput value={team} onChange={(v) => setTeam(v.text)} />
+          <Label>Email:</Label>
+          <TextInput value={email} onChange={(v) => setEmail(v.text)} />
+          <Label>Password:</Label>
+          <TextInput value={password} onChange={(v) => setPassword(v.text)} />
           <Button
-            onPress={() =>
-              AuthorizationAdapter.authorize(team, email, password)
-            }
+            onClick={() => {
+              AuthorizationAdapter.authorize(team, email, password).then(
+                () => {
+                  console.log("Signed in!");
+                },
+                (err) => {
+                  console.log(err);
+                }
+              );
+            }}
           >
             Submit
           </Button>
-        </View>
+        </>
       )}
-    </View>
+    </Box>
   );
 };
