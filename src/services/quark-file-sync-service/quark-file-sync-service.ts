@@ -73,14 +73,14 @@ export class QuarkFileSyncService {
    * try to load the quark's data from a file and update the
    * quark's state.
    */
-  static async registerQuark<T extends object>(
+  static async registerQuark<T extends { firsLoadCompleted: boolean }>(
     name: string,
     quark: Quark<T, any>
   ) {
     const savedState = await this.load<T>(this.getFilenameFor(name));
 
     if (savedState) {
-      quark.set(savedState);
+      quark.set({ ...savedState, firsLoadCompleted: true });
     } else {
       this.save(this.getFilenameFor(name), quark.get());
     }

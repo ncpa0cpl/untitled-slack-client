@@ -1,4 +1,3 @@
-import type GdkPixbuff from "gi://GdkPixbuf";
 import React from "react";
 import {
   Align,
@@ -14,8 +13,9 @@ import {
 } from "react-gjs-renderer";
 import { AuthorizationAdapter } from "../../adapters/authorization/authorization-adapter";
 import { useLoadState } from "../../hooks/use-load-state";
-import { SlackClientQuark } from "../../quarks/slack-client";
-import { UserQuark } from "../../quarks/user";
+import { ImageIndex } from "../../quarks/image-index";
+import { SlackClient } from "../../quarks/slack-client";
+import { SlackUser } from "../../quarks/user";
 
 const SignInInput = (props: {
   value: string;
@@ -37,11 +37,8 @@ const SignInInput = (props: {
 };
 
 export const SignInPanel = () => {
-  const currentUser = UserQuark.use();
-
-  const [userImage, setUserImage] = React.useState<GdkPixbuff.Pixbuf | null>(
-    null
-  );
+  const currentUser = SlackUser.use();
+  const profilePicture = ImageIndex.useProfilePicture(currentUser.value.id);
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -67,7 +64,7 @@ export const SignInPanel = () => {
 
   React.useEffect(() => {
     (async () => {
-      if (currentUser.value.loggedIn && !SlackClientQuark.get().client) {
+      if (currentUser.value.loggedIn && !SlackClient.get().client) {
         try {
           setIsLoading(true);
           await AuthorizationAdapter.authorize(
@@ -75,7 +72,7 @@ export const SignInPanel = () => {
             currentUser.value.id
           );
         } catch (e) {
-          console.log(e);
+          console.error(e);
         } finally {
           setIsLoading(false);
         }
@@ -84,22 +81,43 @@ export const SignInPanel = () => {
   }, [currentUser.value.loggedIn]);
 
   React.useEffect(() => {
-    if (currentUser.value.loggedIn) {
-      fetch(currentUser.value.image.px192!)
+    if (currentUser.value.loggedIn && profilePicture == null) {
+      const pfp = {
+        link: "",
+        size: 1024 as 24 | 32 | 48 | 72 | 192 | 512 | 1024,
+      };
+
+      if (currentUser.value.image.px1024) {
+        pfp.link = currentUser.value.image.px1024;
+        pfp.size = 1024;
+      } else if (currentUser.value.image.px512) {
+        pfp.link = currentUser.value.image.px512;
+        pfp.size = 512;
+      } else if (currentUser.value.image.px192) {
+        pfp.link = currentUser.value.image.px192;
+        pfp.size = 192;
+      } else if (currentUser.value.image.px72) {
+        pfp.link = currentUser.value.image.px72;
+        pfp.size = 72;
+      } else if (currentUser.value.image.px48) {
+        pfp.link = currentUser.value.image.px48;
+        pfp.size = 48;
+      } else if (currentUser.value.image.px32) {
+        pfp.link = currentUser.value.image.px32;
+        pfp.size = 32;
+      } else if (currentUser.value.image.px24) {
+        pfp.link = currentUser.value.image.px24;
+        pfp.size = 24;
+      }
+
+      fetch(pfp.link)
         .then(async (response) => {
-          console.log(await response.text());
-          // const buff = await response.arrayBuffer();
-          // const uint8 = new Uint8Array(buff);
+          const buff = new Uint8Array(await response.arrayBuffer());
 
-          // await writeFile("/home/owner/slack-image.jpg", uint8);
-
-          // const image = GdkPixbuff.Pixbuf.new_from_file(
-          //   "/home/owner/slack-image.jpg"
-          // );
-          // setUserImage(image);
+          ImageIndex.addProfilePicture(currentUser.value.id!, pfp.size, buff);
         })
         .catch((e) => {
-          console.log(e);
+          console.error(e);
         });
     }
   }, [currentUser.value.loggedIn]);
@@ -120,7 +138,7 @@ export const SignInPanel = () => {
               {currentUser.value.displayName ?? currentUser.value.name}!
             </Span>
           </Markup>
-          {userImage && <Image src={userImage} />}
+          {profilePicture && <Image src={profilePicture.fileLocation} />}
         </>
       ) : (
         <>

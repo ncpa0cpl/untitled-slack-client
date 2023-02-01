@@ -1,6 +1,6 @@
 import { WebClient } from "@slack/web-api";
-import { SlackClientQuark } from "../../quarks/slack-client";
-import { UserQuark } from "../../quarks/user";
+import { SlackClient } from "../../quarks/slack-client";
+import { SlackUser } from "../../quarks/user";
 
 export enum AuthResultCode {
   InvalidTeam = "invalid_team",
@@ -55,7 +55,7 @@ export class AuthorizationAdapter {
       signInResponse.user as string
     );
 
-    UserQuark.set({
+    SlackUser.set({
       loggedIn: true,
       id: signInResponse.user as string,
       accessToken: signInResponse.token as string,
@@ -92,7 +92,7 @@ export class AuthorizationAdapter {
       throw new AuthorizationError(AuthResultCode.UserInfoFetchFailed);
     }
 
-    SlackClientQuark.set({
+    SlackClient.set({
       client: authorizedClient,
     });
 
@@ -103,11 +103,11 @@ export class AuthorizationAdapter {
   }
 
   static async signOut() {
-    SlackClientQuark.set({
+    SlackClient.set({
       token: null,
       client: null,
     });
-    UserQuark.set({
+    SlackUser.set({
       loggedIn: false,
     });
   }

@@ -2,6 +2,7 @@ import { quark } from "react-quarks";
 import { QuarkFileSyncService } from "../services/quark-file-sync-service/quark-file-sync-service";
 
 export type User = {
+  firsLoadCompleted: boolean;
   loggedIn: true;
   id: string;
   accessToken: string;
@@ -24,8 +25,10 @@ export type User = {
   };
 };
 
-type UserState = User | { loggedIn: false };
+type UserState =
+  | User
+  | { loggedIn: false; firsLoadCompleted: boolean; id?: undefined };
 
-export const UserQuark = quark({ loggedIn: false } as UserState);
+export const SlackUser = quark({ loggedIn: false } as UserState);
 
-QuarkFileSyncService.registerQuark("current_user", UserQuark);
+QuarkFileSyncService.registerQuark("current_user", SlackUser);
