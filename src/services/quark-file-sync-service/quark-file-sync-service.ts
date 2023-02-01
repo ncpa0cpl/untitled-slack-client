@@ -1,20 +1,16 @@
-import fs from "fs/promises";
-import os from "os";
+import env from "gapp:env";
+import Gio from "gi://Gio";
+import GLib from "gi://GLib";
 import path from "path";
 import type { Quark } from "react-quarks";
+import { fileExists, readFile, writeFile } from "../../utils/fs/fs-utils";
 import { MutexStore } from "../../utils/mutex-store";
 
-const FILE_DATA_DIR = path.resolve(
-  os.homedir(),
-  "./.local/share/untitled-slack-client"
-);
+const FILE_DATA_DIR = path.resolve(GLib.get_user_config_dir(), env.appName);
 
 /**
  * This service is responsible for saving quarks data as files,
  * and loading them back into quarks when the app starts.
- *
- * Quark data files are located in the home, in the subdirectors:
- * `.local/share/untitled-slack-client/`.
  */
 export class QuarkFileSyncService {
   static {
@@ -29,11 +25,10 @@ export class QuarkFileSyncService {
 
   private static async ensureAppDirExists() {
     try {
-      await fs.mkdir(FILE_DATA_DIR, { recursive: true });
+      if (!fileExists(FILE_DATA_DIR))
+        Gio.File.new_for_path(FILE_DATA_DIR).make_directory_with_parents(null);
     } catch (e) {
-      if ((e as any).code === "EEXIST") {
-        return;
-      } else throw e;
+      console.log(e);
     }
   }
 
@@ -44,10 +39,12 @@ export class QuarkFileSyncService {
   private static async save(filename: string, object: object) {
     this.fileMutex.acquire(filename);
     try {
-      return await fs.writeFile(
-        path.resolve(FILE_DATA_DIR, filename),
-        JSON.stringify(object, null, 2)
-      );
+      const filePath = path.resolve(FILE_DATA_DIR, filename);
+      const contents = JSON.stringify(object, null, 2);
+
+      await writeFile(filePath, contents, "utf8");
+    } catch (e) {
+      console.log(e);
     } finally {
       this.fileMutex.release(filename);
     }
@@ -60,7 +57,7 @@ export class QuarkFileSyncService {
   private static async load<T>(filename: string): Promise<T | undefined> {
     this.fileMutex.acquire(filename);
     try {
-      const data = await fs.readFile(path.resolve(FILE_DATA_DIR, filename));
+      const data = await readFile(path.resolve(FILE_DATA_DIR, filename));
       return JSON.parse(data.toString()) as T;
     } catch (e) {
       return undefined;
@@ -80,10 +77,10 @@ export class QuarkFileSyncService {
     name: string,
     quark: Quark<T, any>
   ) {
-    const cachedValue = await this.load<T>(this.getFilenameFor(name));
+    const savedState = await this.load<T>(this.getFilenameFor(name));
 
-    if (cachedValue) {
-      quark.set(cachedValue);
+    if (savedState) {
+      quark.set(savedState);
     } else {
       this.save(this.getFilenameFor(name), quark.get());
     }

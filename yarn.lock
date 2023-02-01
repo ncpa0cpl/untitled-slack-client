@@ -1476,11 +1476,6 @@ parent-module@^1.0.0:
   dependencies:
     callsites "^3.0.0"
 
-path-browserify@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/path-browserify/-/path-browserify-1.0.1.tgz#d98454a9c3753d5790860f16f68867b9e46be1fd"
-  integrity sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==
-
 path-exists@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/path-exists/-/path-exists-4.0.0.tgz#513bdbe2d3b95d7762e8c1137efa195c6c61b5b3"
@@ -1552,15 +1547,14 @@ queue-microtask@^1.2.2:
   resolved "https://registry.yarnpkg.com/queue-microtask/-/queue-microtask-1.2.3.tgz#4929228bbc724dfac43e0efb058caf7b6cfb6243"
   integrity sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==
 
-react-gnome@ncpa0cpl/react-gnome#0.0.1-alpha-6:
+react-gnome@ncpa0cpl/react-gnome#0.0.1-alpha-7:
   version "1.0.0"
-  resolved "https://codeload.github.com/ncpa0cpl/react-gnome/tar.gz/81b963dc077fe8d2087c0392794613be583eb700"
+  resolved "https://codeload.github.com/ncpa0cpl/react-gnome/tar.gz/a91da12428f3e4c5797337abb6c9d526ce89fe43"
   dependencies:
     buffer "^6.0.3"
     clify.js ncpa0cpl/clify.js#0.0.1
     dilswer "1.5.0"
     esbuild "^0.17.5"
-    path-browserify "^1.0.1"
     rimraf "^4.1.2"
     tar "^6.1.13"
     termx-markup "1.1.0"

@@ -3,7 +3,8 @@ import resolve from "esbuild-plugin-resolve";
 export default () => {
   /** @type {import("react-gnome").BuildConfig} */
   const config = {
-    applicationName: "ReactGnomeApp",
+    applicationName: "slack-client",
+    friendlyName: "Slack Client",
     applicationVersion: "1.0.0",
     entrypoint: "./src/start.tsx",
     outDir: "./dist",
@@ -23,19 +24,13 @@ export default () => {
       XMLHttpRequest: true,
       node: {
         path: true,
+        os: true,
+        querystring: true,
       },
     },
     customPolyfills: [
       {
         filepath: "./polyfills/process.js",
-      },
-      {
-        filepath: "querystring-browser",
-        importName: "querystring",
-      },
-      {
-        filepath: "./polyfills/os.js",
-        importName: "os",
       },
       {
         filepath: "./polyfills/zlib.js",
