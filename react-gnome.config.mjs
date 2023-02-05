@@ -11,6 +11,7 @@ export default () => {
     minify: false,
     treeShake: false,
     giVersions: {
+      Gtk: "3.0",
       Soup: "2.4",
     },
     polyfills: {

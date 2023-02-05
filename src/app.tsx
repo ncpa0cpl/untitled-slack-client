@@ -2,7 +2,8 @@ import envs from "gapp:env";
 import React from "react";
 import { Align, ScrollBox, Window } from "react-gjs-renderer";
 import "react-gnome";
-import { SignInPanel } from "./components/signin-panel/signin-panel";
+import { WindowBar } from "./components/window-bar/window-bar";
+import { MainStack } from "./main-stack";
 
 export const App = () => {
   return (
@@ -12,14 +13,15 @@ export const App = () => {
       quitAppOnClose
       title={envs.friendlyAppName}
     >
+      <WindowBar />
       <ScrollBox
         expand
         useChildHeight
         useChildWidth
-        verticalAlign={Align.CENTER}
+        verticalAlign={Align.FILL}
         horizontalAlign={Align.FILL}
       >
-        <SignInPanel />
+        <MainStack />
       </ScrollBox>
     </Window>
   );

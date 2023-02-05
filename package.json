@@ -27,6 +27,7 @@
     "@ncpa0cpl/mutex.js": "^1.0.1",
     "@slack/web-api": "latest",
     "axios": "^1.1.3",
+    "markdown-ast": "^0.3.0",
     "react": "^18.2.0",
     "react-quarks": "^2.0.2"
   },
@@ -43,7 +44,7 @@
     "prettier": "^2.7.1",
     "prettier-plugin-jsdoc": "^0.4.2",
     "querystring-browser": "^1.0.4",
-    "react-gnome": "ncpa0cpl/react-gnome#0.0.1-alpha-7",
+    "react-gnome": "ncpa0cpl/react-gnome#0.0.1-alpha-9",
     "typescript": "^4.9.5"
   },
   "packageManager": "yarn@1.22.19",

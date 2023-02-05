@@ -3,19 +3,17 @@ import {
   Align,
   Box,
   Button,
-  Image,
-  Label,
-  Markup,
   Orientation,
-  Span,
   Spinner,
   TextInput,
 } from "react-gjs-renderer";
 import { AuthorizationAdapter } from "../../adapters/authorization/authorization-adapter";
 import { useLoadState } from "../../hooks/use-load-state";
+import { navigate } from "../../main-stack";
 import { ImageIndex } from "../../quarks/image-index";
 import { SlackClient } from "../../quarks/slack-client";
 import { SlackUser } from "../../quarks/user";
+import { AppMarkup } from "../app-markup/app-markup";
 
 const SignInInput = (props: {
   value: string;
@@ -23,13 +21,9 @@ const SignInInput = (props: {
 }) => {
   return (
     <TextInput
-      ref={(ref) => {
-        if (ref) {
-          ref.widget.width_request = 150;
-        }
-      }}
+      widthRequest={400}
       horizontalAlign={Align.CENTER}
-      margin={[4, 48]}
+      margin={[10, 0]}
       value={props.value}
       onChange={(v) => props.onChange(v.text)}
     />
@@ -120,36 +114,35 @@ export const SignInPanel = () => {
           console.error(e);
         });
     }
+
+    if (currentUser.value.loggedIn) {
+      navigate("chat");
+    }
   }, [currentUser.value.loggedIn]);
 
   return (
     <Box
-      expandHorizontal
+      expand
       orientation={Orientation.VERTICAL}
       horizontalAlign={Align.FILL}
+      verticalAlign={Align.CENTER}
     >
       {isLoading ? (
         <Spinner />
       ) : currentUser.value.loggedIn ? (
-        <>
-          <Markup>
-            <Span fontSize={24}>
-              You are logged in{" "}
-              {currentUser.value.displayName ?? currentUser.value.name}!
-            </Span>
-          </Markup>
-          {profilePicture && <Image src={profilePicture.fileLocation} />}
-        </>
+        <Spinner />
       ) : (
-        <>
-          <Label>Team:</Label>
+        <Box>
+          <AppMarkup>Team:</AppMarkup>
           <SignInInput value={team} onChange={(v) => setTeam(v)} />
-          <Label>Email:</Label>
+          <AppMarkup>Email:</AppMarkup>
           <SignInInput value={email} onChange={(v) => setEmail(v)} />
-          <Label>Password:</Label>
+          <AppMarkup>Password:</AppMarkup>
           <SignInInput value={password} onChange={(v) => setPassword(v)} />
-          <Button onClick={authorize}>Submit</Button>
-        </>
+          <Button horizontalAlign={Align.END} onClick={authorize}>
+            Submit
+          </Button>
+        </Box>
       )}
     </Box>
   );
