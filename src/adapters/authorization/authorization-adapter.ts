@@ -56,6 +56,7 @@ export class AuthorizationAdapter {
     );
 
     SlackUser.set({
+      firsLoadCompleted: true,
       loggedIn: true,
       id: signInResponse.user as string,
       accessToken: signInResponse.token as string,
@@ -108,6 +109,7 @@ export class AuthorizationAdapter {
       client: null,
     });
     SlackUser.set({
+      firsLoadCompleted: true,
       loggedIn: false,
     });
   }

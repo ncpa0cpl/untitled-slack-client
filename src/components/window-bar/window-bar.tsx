@@ -1,11 +1,10 @@
 import envs from "gapp:env";
-import Gtk from "gi://Gtk";
 import React from "react";
 import {
   Box,
   Button,
   HeaderBar,
-  Icon,
+  IconName,
   PackEnd,
   PopoverMenu,
   PopoverMenuEntry,
@@ -13,11 +12,6 @@ import {
 } from "react-gjs-renderer";
 import type { SyntheticEvent } from "react-gjs-renderer/dist/gjs-elements/rg-types";
 import { FontSettings } from "../../quarks/settings/font-size";
-
-const BtnImage = Gtk.Image.new_from_icon_name(
-  Icon.ViewMore + "-symbolic",
-  Gtk.IconSize.LARGE_TOOLBAR
-);
 
 export const WindowBar = () => {
   const fontSettings = FontSettings.use();
@@ -180,7 +174,12 @@ export const WindowBar = () => {
               </>
             )}
             renderAnchor={(open) => (
-              <Button margin={[0, 10, 0, 0]} image={BtnImage} onClick={open} />
+              <Button
+                margin={[0, 10, 0, 0]}
+                icon={IconName.ViewMoreSymbolic}
+                iconPixelSize={22}
+                onClick={open}
+              />
             )}
           />
         </PackEnd>

@@ -1,4 +1,3 @@
-import type Gtk from "gi://Gtk";
 import React from "react";
 import {
   Align,
@@ -13,12 +12,13 @@ import type { ScrollBoxEvent } from "react-gjs-renderer/dist/gjs-elements/gtk3/s
 import { ActiveConversation } from "../../../../quarks/conversations";
 import type { SlackMessage } from "../../../../services/slack-service/slack-service";
 import { SlackService } from "../../../../services/slack-service/slack-service";
+import { ConversationHeader } from "./conversation-header";
 import { MessageBox } from "./message";
 
 export const ConversationBox = () => {
-  const adjustmentRef = React.useRef<Gtk.Adjustment | null>(null);
+  const scrollBoxRef = React.useRef<Rg.Element.ScrollBoxElement | null>(null);
   const isFirstUserScroll = React.useRef(true);
-  const positionFromBottom = React.useRef(0);
+  const lastPosFromBottom = React.useRef(0);
   const loadingInProgress = React.useRef(false);
 
   const currentConversation = ActiveConversation.use();
@@ -28,39 +28,27 @@ export const ConversationBox = () => {
   const [messages, setMessages] = React.useState<SlackMessage[]>([]);
   const [cursor, setCursor] = React.useState<string | undefined>();
 
-  const scrollTo = (value: number) => {
-    setTimeout(() => {
-      if (adjustmentRef.current) {
-        adjustmentRef.current.set_value(value);
-      }
-    });
-  };
-
   const scrollHandler = React.useCallback((e: ScrollBoxEvent) => {
     if (loadingInProgress.current) {
       e.preventDefault();
     }
 
-    if (isFirstUserScroll.current) {
-      isFirstUserScroll.current = false;
-    }
+    isFirstUserScroll.current = false;
 
-    if (adjustmentRef.current) {
-      positionFromBottom.current =
-        adjustmentRef.current.get_upper() - adjustmentRef.current.get_value();
+    if (scrollBoxRef.current) {
+      lastPosFromBottom.current =
+        scrollBoxRef.current.currentPosition("bottom");
     }
   }, []);
 
   const contentSizeChangeHandler = React.useCallback(() => {
-    const adjustment = adjustmentRef.current;
-    if (!adjustment) return;
+    const scrollBox = scrollBoxRef.current;
+    if (!scrollBox) return;
 
     if (isFirstUserScroll.current) {
-      scrollTo(adjustment.get_upper());
+      scrollBox.scrollTo(0, "bottom");
     } else {
-      const newPositionFromTop =
-        adjustment.get_upper() - positionFromBottom.current;
-      scrollTo(newPositionFromTop);
+      scrollBox.scrollTo(lastPosFromBottom.current, "bottom");
     }
   }, []);
 
@@ -83,7 +71,7 @@ export const ConversationBox = () => {
       return new Promise<void>(async (resolve) => {
         try {
           const response = await SlackService.fetchMessages(
-            currentConversation.value!,
+            currentConversation.value!.id,
             nextCursor
           );
 
@@ -111,6 +99,7 @@ export const ConversationBox = () => {
 
   return (
     <Box expand verticalAlign={Align.FILL} horizontalAlign={Align.FILL}>
+      <ConversationHeader title={currentConversation.value?.name ?? ""} />
       {isLoading && (
         <Box
           expand={messages.length === 0}
@@ -122,11 +111,7 @@ export const ConversationBox = () => {
       )}
       {messages.length > 0 && (
         <ScrollBox
-          ref={(elem) => {
-            if (elem) {
-              adjustmentRef.current = elem.widget.get_vadjustment();
-            }
-          }}
+          ref={scrollBoxRef}
           onScroll={scrollHandler}
           onContentSizeChange={contentSizeChangeHandler}
           onEdgeReached={(e) => {
@@ -153,12 +138,16 @@ export const ConversationBox = () => {
                 Failed to load the conversation's messages.
               </Label>
             ) : (
-              messages.map((message) => (
+              messages.map((message, i) => (
                 <MessageBox
                   key={message.id}
                   markdown={message.markdown}
                   userID={message.userID}
                   username={message.username}
+                  sentAt={message.timestamp}
+                  subthread={
+                    i === messages.length - 1 ? [{} as any] : undefined
+                  }
                 />
               ))
             )}

@@ -35,14 +35,14 @@ export const Conversations = quark(
   }
 );
 
-export const ActiveConversation = quark(null as null | string);
+export const ActiveConversation = quark(null as null | ConversationChannel);
 
 Conversations.subscribe((state) => {
   if (ActiveConversation.get() == null) {
     if (state.groupChannels.length > 0) {
-      ActiveConversation.set(state.groupChannels[0]!.id);
+      ActiveConversation.set(state.groupChannels[0]!);
     } else if (state.privateChannels.length > 0) {
-      ActiveConversation.set(state.privateChannels[0]!.id);
+      ActiveConversation.set(state.privateChannels[0]!);
     }
   }
 

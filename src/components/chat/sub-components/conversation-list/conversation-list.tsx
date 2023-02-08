@@ -7,14 +7,15 @@ import {
 import { ConvListButton } from "./conv-list-button";
 
 export const ConversationList = () => {
-  const groupChannels = Conversations.useActiveGroupChannels();
+  const groupChannels = Conversations.useGroupChannels();
+  const privateChannels = Conversations.usePrivateChannels();
   const activeConversation = ActiveConversation.use();
 
   return (
     <ScrollBox
       expandVertical
-      minWidth={300}
-      maxWidth={300}
+      minWidth={325}
+      maxWidth={325}
       verticalAlign={Align.FILL}
       horizontalAlign={Align.START}
       style={{
@@ -22,13 +23,23 @@ export const ConversationList = () => {
       }}
     >
       <Box expandHorizontal horizontalAlign={Align.FILL}>
+        {privateChannels.map((channel) => (
+          <ConvListButton
+            key={channel.id}
+            label={channel.name}
+            isActive={activeConversation.value?.id === channel.id}
+            onClick={() => {
+              activeConversation.set(channel);
+            }}
+          />
+        ))}
         {groupChannels.map((channel) => (
           <ConvListButton
             key={channel.id}
             label={channel.name}
-            isActive={activeConversation.value === channel.id}
+            isActive={activeConversation.value?.id === channel.id}
             onClick={() => {
-              activeConversation.set(channel.id);
+              activeConversation.set(channel);
             }}
           />
         ))}

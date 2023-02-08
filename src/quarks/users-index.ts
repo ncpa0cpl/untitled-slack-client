@@ -4,6 +4,20 @@ import { QuarkFileSyncService } from "../services/quark-file-sync-service/quark-
 export type UserInfo = {
   id: string;
   name: string;
+  email: string;
+  teamID: string;
+  color?: string;
+  phone?: string;
+  image: {
+    original?: string;
+    px1024?: string;
+    px512?: string;
+    px192?: string;
+    px72?: string;
+    px48?: string;
+    px32?: string;
+    px24?: string;
+  };
 };
 
 export const UsersIndex = quark(

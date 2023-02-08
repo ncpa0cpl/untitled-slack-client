@@ -6,25 +6,25 @@ import { quark } from "react-quarks";
 import { QuarkFileSyncService } from "../services/quark-file-sync-service/quark-file-sync-service";
 import { fileExists, writeFile } from "../utils/fs/fs-utils";
 
-enum ImageType {
+export enum ImageType {
   ProfilePicture = "profile-picture",
   UserContent = "user-content",
 }
 
-type ProfilePicture = {
+export type ProfilePicture = {
   type: ImageType.ProfilePicture;
   size: 24 | 32 | 48 | 72 | 192 | 512 | 1024;
   uid: string;
   fileLocation: string;
 };
 
-type UserImage = {
+export type UserImage = {
   type: ImageType.UserContent;
   contentID: string;
   fileLocation: string;
 };
 
-type Image = ProfilePicture | UserImage;
+export type Image = ProfilePicture | UserImage;
 
 const IMAGES_DIR = path.resolve(
   GLib.get_user_config_dir(),
@@ -99,11 +99,24 @@ export const ImageIndex = quark(
         if (!uid) return undefined;
 
         if (size != null) {
-          return state.images.find(
-            (image) =>
-              image.type === ImageType.ProfilePicture &&
-              image.uid === uid &&
-              image.size === size
+          return state.images.reduce(
+            (foundImg: ProfilePicture | undefined, nextImg) => {
+              if (
+                nextImg.type === ImageType.ProfilePicture &&
+                nextImg.uid === uid
+              ) {
+                if (!foundImg) return nextImg;
+                if (foundImg.size === size) return foundImg;
+                if (nextImg.size === size) return nextImg;
+
+                const foundSizeDelta = Math.abs(foundImg.size - size);
+                const nextSizeDelta = Math.abs(nextImg.size - size);
+
+                if (nextSizeDelta < foundSizeDelta) return nextImg;
+              }
+              return foundImg;
+            },
+            undefined
           );
         }
 

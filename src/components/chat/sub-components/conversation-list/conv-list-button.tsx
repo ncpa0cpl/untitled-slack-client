@@ -1,6 +1,5 @@
 import React from "react";
 import { Align, ButtonBox } from "react-gjs-renderer";
-import { FontSettings } from "../../../../quarks/settings/font-size";
 import { AppMarkup } from "../../../app-markup/app-markup";
 
 export type ConvListButton = {
@@ -10,8 +9,6 @@ export type ConvListButton = {
 };
 
 export const ConvListButton = (props: ConvListButton) => {
-  const fontSettings = FontSettings.use();
-
   return (
     <ButtonBox
       horizontalAlign={Align.FILL}

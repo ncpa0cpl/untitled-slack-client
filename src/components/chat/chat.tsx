@@ -1,6 +1,5 @@
 import React from "react";
 import { Align, Box, Orientation } from "react-gjs-renderer";
-import { ImageIndex } from "../../quarks/image-index";
 import { SlackClient } from "../../quarks/slack-client";
 import { SlackUser } from "../../quarks/user";
 import { SlackService } from "../../services/slack-service/slack-service";
@@ -9,7 +8,6 @@ import { ConversationBox } from "./sub-components/conversation/conversation";
 
 export const Chat = () => {
   const currentUser = SlackUser.use();
-  const profilePicture = ImageIndex.useProfilePicture(currentUser.value.id);
   const slackClient = SlackClient.use();
 
   React.useEffect(() => {
