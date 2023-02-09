@@ -1,14 +1,35 @@
 import React from "react";
-import { Align, Box, ScrollBox } from "react-gjs-renderer";
+import { Align, Box, ScrollBox, Separator } from "react-gjs-renderer";
+import type { ConversationChannel } from "../../../../quarks/conversations";
 import {
   ActiveConversation,
   Conversations,
 } from "../../../../quarks/conversations";
 import { ConvListButton } from "./conv-list-button";
 
+const List = (props: {
+  activeConvID: string;
+  useConversations: () => ConversationChannel[];
+}) => {
+  const channels = props.useConversations();
+
+  return (
+    <>
+      {channels.map((channel) => (
+        <ConvListButton
+          key={channel.id}
+          label={channel.name}
+          isActive={props.activeConvID === channel.id}
+          onClick={() => {
+            ActiveConversation.set(channel);
+          }}
+        />
+      ))}
+    </>
+  );
+};
+
 export const ConversationList = () => {
-  const groupChannels = Conversations.useGroupChannels();
-  const privateChannels = Conversations.usePrivateChannels();
   const activeConversation = ActiveConversation.use();
 
   return (
@@ -23,26 +44,20 @@ export const ConversationList = () => {
       }}
     >
       <Box expandHorizontal horizontalAlign={Align.FILL}>
-        {privateChannels.map((channel) => (
-          <ConvListButton
-            key={channel.id}
-            label={channel.name}
-            isActive={activeConversation.value?.id === channel.id}
-            onClick={() => {
-              activeConversation.set(channel);
-            }}
-          />
-        ))}
-        {groupChannels.map((channel) => (
-          <ConvListButton
-            key={channel.id}
-            label={channel.name}
-            isActive={activeConversation.value?.id === channel.id}
-            onClick={() => {
-              activeConversation.set(channel);
-            }}
-          />
-        ))}
+        <List
+          activeConvID={activeConversation.value?.id ?? ""}
+          useConversations={Conversations.useActiveDirectConversations}
+        />
+        <Separator margin={[5, 0]} />
+        <List
+          activeConvID={activeConversation.value?.id ?? ""}
+          useConversations={Conversations.useActiveGroupConversations}
+        />
+        <Separator margin={[5, 0]} />
+        <List
+          activeConvID={activeConversation.value?.id ?? ""}
+          useConversations={Conversations.useActivePrivateConversations}
+        />
       </Box>
     </ScrollBox>
   );

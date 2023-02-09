@@ -10,6 +10,7 @@ import {
 } from "react-gjs-renderer";
 import type { ScrollBoxEvent } from "react-gjs-renderer/dist/gjs-elements/gtk3/scroll-box/scroll-box";
 import { ActiveConversation } from "../../../../quarks/conversations";
+import { SlackClient } from "../../../../quarks/slack-client";
 import type { SlackMessage } from "../../../../services/slack-service/slack-service";
 import { SlackService } from "../../../../services/slack-service/slack-service";
 import { ConversationHeader } from "./conversation-header";
@@ -20,8 +21,10 @@ export const ConversationBox = () => {
   const isFirstUserScroll = React.useRef(true);
   const lastPosFromBottom = React.useRef(0);
   const loadingInProgress = React.useRef(false);
+  const ws = React.useRef<WebSocket | null>(null);
 
   const currentConversation = ActiveConversation.use();
+  const slackClient = SlackClient.use();
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [loadError, setLoadError] = React.useState<any>(null);
@@ -92,10 +95,28 @@ export const ConversationBox = () => {
   );
 
   React.useEffect(() => {
-    loadMessages(undefined, true).then(() => {
-      isFirstUserScroll.current = true;
-    });
-  }, [currentConversation.value]);
+    if (ws.current) {
+      ws.current.close();
+      ws.current = null;
+    }
+
+    if (slackClient.value.client) {
+      loadMessages(undefined, true)
+        .then(async () => {
+          isFirstUserScroll.current = true;
+
+          // const context = await slackClient.value.client?.rtm.connect();
+
+          // if (context && context.ok) {
+          //   ws.current = new WebSocket(context!.url!);
+          //   ws.current.onmessage = (e) => {
+          //     console.log(e.data);
+          //   };
+          // }
+        })
+        .catch(console.error);
+    }
+  }, [currentConversation.value, slackClient.value.client]);
 
   return (
     <Box expand verticalAlign={Align.FILL} horizontalAlign={Align.FILL}>

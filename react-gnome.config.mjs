@@ -23,6 +23,7 @@ export default () => {
       FormData: true,
       URL: true,
       XMLHttpRequest: true,
+      WebSocket: true,
       node: {
         path: true,
         os: true,

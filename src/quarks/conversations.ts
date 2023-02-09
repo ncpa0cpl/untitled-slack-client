@@ -1,36 +1,51 @@
 import { quark } from "react-quarks";
 
+export enum ConversationType {
+  Direct = "im",
+  DirectGroup = "mpim",
+  Group = "public_channel",
+  PrivateGroup = "private_channel",
+}
+
 export type ConversationChannel = {
   id: string;
   name: string;
   isOrgShared: boolean;
   memberCount: number;
   isMember: boolean;
+  type: ConversationType;
+  uid?: string;
 };
 
 export const Conversations = quark(
   {
-    groupChannels: [] as ConversationChannel[],
-    privateChannels: [] as ConversationChannel[],
+    conversations: [] as ConversationChannel[],
   },
   {
     actions: {
-      setGroupChannels: (state, groupChannels: ConversationChannel[]) => ({
+      setConversations: (state, conversations: ConversationChannel[]) => ({
         ...state,
-        groupChannels,
-      }),
-      setPrivateChannels: (state, privateChannels: ConversationChannel[]) => ({
-        ...state,
-        privateChannels,
+        conversations,
       }),
     },
     selectors: {
-      useGroupChannels: (state) => state.groupChannels,
-      usePrivateChannels: (state) => state.privateChannels,
-      useActiveGroupChannels: (state) =>
-        state.groupChannels.filter((channel) => channel.isMember),
-      useActivePrivateChannels: (state) =>
-        state.privateChannels.filter((channel) => channel.isMember),
+      useActiveDirectConversations: (state) =>
+        state.conversations.filter(
+          (channel) =>
+            channel.isMember && channel.type === ConversationType.Direct
+        ),
+      useActiveGroupConversations: (state) =>
+        state.conversations.filter(
+          (channel) =>
+            channel.isMember &&
+            (channel.type === ConversationType.Group ||
+              channel.type === ConversationType.DirectGroup)
+        ),
+      useActivePrivateConversations: (state) =>
+        state.conversations.filter(
+          (channel) =>
+            channel.isMember && channel.type === ConversationType.PrivateGroup
+        ),
     },
   }
 );
@@ -39,14 +54,12 @@ export const ActiveConversation = quark(null as null | ConversationChannel);
 
 Conversations.subscribe((state) => {
   if (ActiveConversation.get() == null) {
-    if (state.groupChannels.length > 0) {
-      ActiveConversation.set(state.groupChannels[0]!);
-    } else if (state.privateChannels.length > 0) {
-      ActiveConversation.set(state.privateChannels[0]!);
+    if (state.conversations.length > 0) {
+      ActiveConversation.set(state.conversations[0]!);
     }
   }
 
-  if (state.groupChannels.length === 0 && state.privateChannels.length === 0) {
+  if (state.conversations.length === 0) {
     ActiveConversation.set(null);
   }
 });

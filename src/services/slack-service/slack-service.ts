@@ -1,5 +1,9 @@
+import type {
+  Channel,
+  ConversationsListResponse,
+} from "@slack/web-api/dist/response/ConversationsListResponse";
 import type { ConversationChannel } from "../../quarks/conversations";
-import { Conversations } from "../../quarks/conversations";
+import { Conversations, ConversationType } from "../../quarks/conversations";
 import { ImageIndex, ImageType } from "../../quarks/image-index";
 import { SlackClient } from "../../quarks/slack-client";
 import type { UserInfo } from "../../quarks/users-index";
@@ -31,35 +35,99 @@ export class SlackService {
     return state.client;
   }
 
+  static getUserInfo(userID: string) {
+    const knownUsers = UsersIndex.get();
+
+    const user = knownUsers.users.find((user) => user.id === userID);
+
+    if (user) {
+      return user;
+    }
+
+    return this.loadUserInfo(userID);
+  }
+
   static async loadConversations() {
     try {
       const client = this.getClient();
 
-      const response = await client.conversations.list({
-        types: "public_channel,private_channel",
-      });
+      const channels: Channel[] = [];
+      let cursor: string | undefined = undefined;
 
-      if (!response.ok) {
-        throw new Error(response.error);
+      while (true) {
+        const resp: ConversationsListResponse = await client.conversations.list(
+          {
+            types: "public_channel,private_channel,mpim,im",
+            exclude_archived: true,
+            limit: 200,
+            cursor: cursor,
+          }
+        );
+
+        if (!resp) {
+          break;
+        }
+
+        if (!resp.ok) {
+          throw new Error(resp.error);
+        }
+
+        channels.push(...(resp.channels ?? []));
+
+        if (resp.response_metadata?.next_cursor) {
+          cursor = resp.response_metadata.next_cursor;
+        } else {
+          break;
+        }
       }
 
-      const groupChannels: ConversationChannel[] = [];
+      const conversations: ConversationChannel[] = [];
 
-      for (const channel of response.channels ?? []) {
-        if (!channel.id || !channel.name || !channel.is_channel) {
+      for (const channel of channels) {
+        if (!channel.id) {
           continue;
         }
 
-        groupChannels.push({
-          id: channel.id,
-          name: channel.name,
-          isMember: !!channel.is_member,
-          isOrgShared: !!channel.is_org_shared,
-          memberCount: channel.num_members ?? 0,
-        });
+        if (!channel.name && channel.user) {
+          const user = await this.getUserInfo(channel.user);
+
+          conversations.push({
+            id: channel.id,
+            name: user.name,
+            isMember: !!(channel.priority != null && channel.priority > 0),
+            isOrgShared: !!channel.is_org_shared,
+            memberCount: 2,
+            type: ConversationType.Direct,
+            uid: user.id,
+          });
+        } else if (channel.name) {
+          if (channel.is_private) {
+            conversations.push({
+              id: channel.id,
+              name: channel.name,
+              isMember: !!channel.is_member,
+              isOrgShared: !!channel.is_org_shared,
+              memberCount: channel.num_members ?? 0,
+              type: ConversationType.PrivateGroup,
+            });
+          }
+          conversations.push({
+            id: channel.id,
+            name: channel.name,
+            isMember: !!channel.is_member,
+            isOrgShared: !!channel.is_org_shared,
+            memberCount: channel.num_members ?? 0,
+            type: channel.is_channel
+              ? ConversationType.Group
+              : ConversationType.DirectGroup,
+          });
+        }
       }
 
-      Conversations.setGroupChannels(groupChannels);
+      // sort by name
+      conversations.sort((a, b) => a.name.localeCompare(b.name));
+
+      Conversations.setConversations(conversations);
     } catch (e) {
       console.error(e);
     }
