@@ -4,7 +4,6 @@ import { Box, Image } from "react-gjs-renderer";
 import type { MarginProps } from "react-gjs-renderer/dist/gjs-elements/utils/property-maps-factories/create-margin-prop-mapper";
 import type { ProfilePicture } from "../../quarks/image-index";
 import { ImageIndex } from "../../quarks/image-index";
-import { UsersIndex } from "../../quarks/users-index";
 import { SlackService } from "../../services/slack-service/slack-service";
 
 export type UserProfilePictureProps = {
@@ -30,11 +29,9 @@ export const UserProfilePicture = (props: UserProfilePictureProps) => {
         !profilePicture &&
         ImageIndex.get().firsLoadCompleted
       ) {
-        let user = UsersIndex.get().users.find((u) => u.id === props.userID);
-        if (!user) {
-          user = await SlackService.loadUserInfo(props.userID);
-        }
-        SlackService.loadUserProfilePictures(user);
+        SlackService.users
+          .getUserProfilePictures(props.userID)
+          .catch(console.error);
       }
     })();
   }, [props.userID]);

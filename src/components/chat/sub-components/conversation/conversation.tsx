@@ -9,8 +9,8 @@ import {
   Spinner,
 } from "react-gjs-renderer";
 import type { ScrollBoxEvent } from "react-gjs-renderer/dist/gjs-elements/gtk3/scroll-box/scroll-box";
-import { ActiveConversation } from "../../../../quarks/conversations";
-import { SlackClient } from "../../../../quarks/slack-client";
+import { ActiveConversation } from "../../../../quarks/slack/conversations";
+import { SlackClient } from "../../../../quarks/slack/slack-client";
 import type { SlackMessage } from "../../../../services/slack-service/slack-service";
 import { SlackService } from "../../../../services/slack-service/slack-service";
 import { ConversationHeader } from "./conversation-header";
@@ -73,7 +73,7 @@ export const ConversationBox = () => {
 
       return new Promise<void>(async (resolve) => {
         try {
-          const response = await SlackService.fetchMessages(
+          const response = await SlackService.channels.fetchMessages(
             currentConversation.value!.id,
             nextCursor
           );

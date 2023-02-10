@@ -85,7 +85,7 @@ const MessageBoxImpl = (props: MessageBoxProps) => {
 
   React.useEffect(() => {
     if (!userInfo && props.userID) {
-      SlackService.loadUserInfo(props.userID);
+      SlackService.users.getUser(props.userID);
     }
   }, [userInfo]);
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { Align, Box, Orientation } from "react-gjs-renderer";
-import { SlackClient } from "../../quarks/slack-client";
+import { SlackClient } from "../../quarks/slack/slack-client";
 import { SlackUser } from "../../quarks/user";
 import { SlackService } from "../../services/slack-service/slack-service";
 import { ConversationList } from "./sub-components/conversation-list/conversation-list";
@@ -13,7 +13,10 @@ export const Chat = () => {
   React.useEffect(() => {
     if (!slackClient.value.client) return;
 
-    SlackService.loadConversations();
+    SlackService.channels
+      .getAllConversations()
+      .then(() => SlackService.channels.getConversationsInfo())
+      .catch(console.error);
   }, [slackClient.value.client]);
 
   if (!currentUser.value.loggedIn) {

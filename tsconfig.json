@@ -8,7 +8,6 @@
     "rootDir": "./src",
     "downlevelIteration": true,
     "strict": true,
-    "noUnusedLocals": true,
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
     "skipLibCheck": true,

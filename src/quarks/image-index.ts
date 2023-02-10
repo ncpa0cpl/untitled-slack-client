@@ -42,38 +42,44 @@ export const ImageIndex = quark(
   },
   {
     actions: {
-      async addProfilePicture(
+      async addProfilePictures(
         state,
         uid: string,
-        size: ProfilePicture["size"],
-        image: Uint8Array
+        images: {
+          buffer: Uint8Array;
+          size: ProfilePicture["size"];
+        }[]
       ) {
-        if (
-          state.images.some(
-            (img) =>
-              img.type === ImageType.ProfilePicture &&
-              img.uid === uid &&
-              img.size === size
-          )
-        ) {
-          return state;
+        const newImages: Image[] = [];
+
+        for (const image of images) {
+          if (
+            state.images.some(
+              (img) =>
+                img.type === ImageType.ProfilePicture &&
+                img.uid === uid &&
+                img.size === image.size
+            )
+          ) {
+            continue;
+          }
+
+          const filename = `upfp_${uid}_x${image.size}.png`;
+          const fileLocation = path.resolve(IMAGES_DIR, filename);
+
+          await writeFile(fileLocation, image.buffer);
+
+          newImages.push({
+            uid,
+            fileLocation,
+            size: image.size,
+            type: ImageType.ProfilePicture,
+          });
         }
-
-        const filename = `upfp_x${size}_${uid}.png`;
-        const fileLocation = path.resolve(IMAGES_DIR, filename);
-
-        await writeFile(fileLocation, image);
 
         return {
           ...state,
-          images: state.images.concat([
-            {
-              type: ImageType.ProfilePicture,
-              fileLocation,
-              uid,
-              size,
-            },
-          ]),
+          images: state.images.concat(newImages),
         };
       },
       async addUserImage(state, contentID: string, image: Uint8Array) {

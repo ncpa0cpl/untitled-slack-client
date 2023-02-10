@@ -1,10 +1,10 @@
 import React from "react";
 import { Align, Box, ScrollBox, Separator } from "react-gjs-renderer";
-import type { ConversationChannel } from "../../../../quarks/conversations";
+import type { ConversationChannel } from "../../../../quarks/slack/conversations";
 import {
   ActiveConversation,
   Conversations,
-} from "../../../../quarks/conversations";
+} from "../../../../quarks/slack/conversations";
 import { ConvListButton } from "./conv-list-button";
 
 const List = (props: {
@@ -19,6 +19,7 @@ const List = (props: {
         <ConvListButton
           key={channel.id}
           label={channel.name}
+          unreadCount={channel.unreadCount}
           isActive={props.activeConvID === channel.id}
           onClick={() => {
             ActiveConversation.set(channel);

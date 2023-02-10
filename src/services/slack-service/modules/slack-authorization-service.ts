@@ -1,6 +1,7 @@
 import { WebClient } from "@slack/web-api";
-import { SlackClient } from "../../quarks/slack/slack-client";
-import { SlackUser } from "../../quarks/user";
+import { SlackClient } from "../../../quarks/slack/slack-client";
+import { SlackUser } from "../../../quarks/user";
+import type { SlackService } from "../slack-service";
 
 export enum AuthResultCode {
   InvalidTeam = "invalid_team",
@@ -28,9 +29,11 @@ export class AuthorizationError extends Error {
   }
 }
 
-export class AuthorizationAdapter {
-  static async logIn(team: string, email: string, password: string) {
-    const client = new WebClient(undefined, {
+export class SlackAuthorizationService {
+  constructor(private readonly mainService: typeof SlackService) {}
+
+  createClient(token?: string) {
+    const client = new WebClient(token, {
       maxRequestConcurrency: 10,
       retryConfig: {
         minTimeout: 100,
@@ -39,6 +42,24 @@ export class AuthorizationAdapter {
         retries: 5,
       },
     });
+
+    SlackClient.set({ client });
+
+    return client;
+  }
+
+  getOrCreateClient() {
+    const client = SlackClient.get();
+
+    if (client.client) {
+      return client.client;
+    }
+
+    return this.createClient();
+  }
+
+  async logIn(team: string, email: string, password: string) {
+    const client = this.createClient();
 
     const findTeamResponse = await client.apiCall("auth.findTeam", {
       domain: team,
@@ -58,7 +79,7 @@ export class AuthorizationAdapter {
       throw new AuthorizationError(AuthResultCode.UserAuthFailed);
     }
 
-    const { user } = await this.authorize(
+    const user = await this.authorizeUser(
       signInResponse.token as string,
       signInResponse.user as string
     );
@@ -87,13 +108,17 @@ export class AuthorizationAdapter {
       },
     });
 
-    return AuthResultCode.Success;
+    return user;
   }
 
-  static async authorize(token: string, userID: string) {
-    const authorizedClient = new WebClient(token as string);
+  async authorizeUser(token: string, userID: string) {
+    const client = this.createClient(token);
 
-    const userInfo = await authorizedClient.users.info({
+    SlackClient.set({
+      client: client,
+    });
+
+    const userInfo = await client.users.info({
       user: userID,
     });
 
@@ -101,17 +126,10 @@ export class AuthorizationAdapter {
       throw new AuthorizationError(AuthResultCode.UserInfoFetchFailed);
     }
 
-    SlackClient.set({
-      client: authorizedClient,
-    });
-
-    return {
-      authorizedClient,
-      user: userInfo.user,
-    };
+    return userInfo.user;
   }
 
-  static async signOut() {
+  async signOut() {
     SlackClient.set({
       token: null,
       client: null,
