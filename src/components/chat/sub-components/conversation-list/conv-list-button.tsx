@@ -5,10 +5,11 @@ import {
   ButtonBox,
   EllipsizeMode,
   Orientation,
-  PackEnd,
+  PackType,
   Span,
 } from "react-gjs-renderer";
 import { AppMarkup } from "../../../app-markup/app-markup";
+import { FontMod, FontSize } from "../../../font-size/font-size-context";
 
 export type ConvListButton = {
   onClick: () => void;
@@ -52,8 +53,8 @@ export const ConvListButton = (props: ConvListButton) => {
           <Span fontWeight={hasUnread ? "bold" : "normal"}>{props.label}</Span>
         </AppMarkup>
         {hasUnread && (
-          <PackEnd
-            element={Box}
+          <Box
+            cpt:pack-type={PackType.END}
             margin={[0, 10, 0, 0]}
             verticalAlign={Align.CENTER}
             widthRequest={30}
@@ -62,15 +63,16 @@ export const ConvListButton = (props: ConvListButton) => {
               background: "rgba(128, 128, 128, 0.3)",
             }}
           >
-            <AppMarkup
-              margin={[4, 0]}
-              horizontalAlign={Align.CENTER}
-              verticalAlign={Align.CENTER}
-              fontSizeMultiplier={0.9}
-            >
-              {props.unreadCount! > 9 ? "9+" : props.unreadCount!.toString()}
-            </AppMarkup>
-          </PackEnd>
+            <FontSize size={FontMod.shrink.by10}>
+              <AppMarkup
+                margin={[4, 0]}
+                horizontalAlign={Align.CENTER}
+                verticalAlign={Align.CENTER}
+              >
+                {props.unreadCount! > 9 ? "9+" : props.unreadCount!.toString()}
+              </AppMarkup>
+            </FontSize>
+          </Box>
         )}
       </Box>
     </ButtonBox>

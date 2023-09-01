@@ -34,32 +34,40 @@ export const ConversationList = () => {
   const activeConversation = ActiveConversation.use();
 
   return (
-    <ScrollBox
-      expandVertical
-      minWidth={325}
-      maxWidth={325}
+    <Box
+      cpt:shrink={false}
+      expand
+      widthRequest={275}
       verticalAlign={Align.FILL}
-      horizontalAlign={Align.START}
-      style={{
-        background: "rgba(128, 128, 128, 0.1)",
-      }}
+      horizontalAlign={Align.FILL}
     >
-      <Box expandHorizontal horizontalAlign={Align.FILL}>
-        <List
-          activeConvID={activeConversation.value?.id ?? ""}
-          useConversations={Conversations.useActiveDirectConversations}
-        />
-        <Separator margin={[5, 0]} />
-        <List
-          activeConvID={activeConversation.value?.id ?? ""}
-          useConversations={Conversations.useActiveGroupConversations}
-        />
-        <Separator margin={[5, 0]} />
-        <List
-          activeConvID={activeConversation.value?.id ?? ""}
-          useConversations={Conversations.useActivePrivateConversations}
-        />
-      </Box>
-    </ScrollBox>
+      <ScrollBox
+        expandVertical
+        expandHorizontal
+        useChildWidth
+        verticalAlign={Align.FILL}
+        horizontalAlign={Align.FILL}
+        style={{
+          background: "rgba(128, 128, 128, 0.1)",
+        }}
+      >
+        <Box expandHorizontal horizontalAlign={Align.FILL}>
+          <List
+            activeConvID={activeConversation.value?.id ?? ""}
+            useConversations={Conversations.useActiveDirectConversations}
+          />
+          <Separator margin={[5, 0]} />
+          <List
+            activeConvID={activeConversation.value?.id ?? ""}
+            useConversations={Conversations.useActiveGroupConversations}
+          />
+          <Separator margin={[5, 0]} />
+          <List
+            activeConvID={activeConversation.value?.id ?? ""}
+            useConversations={Conversations.useActivePrivateConversations}
+          />
+        </Box>
+      </ScrollBox>
+    </Box>
   );
 };

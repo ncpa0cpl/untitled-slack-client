@@ -1,87 +1,116 @@
 import Gtk from "gi://Gtk";
-import type { Node as MdNode } from "markdown-ast";
-import React from "react";
+import React, { Fragment } from "react";
 import {
   Align,
-  Anchor,
   Box,
   Button,
   ButtonType,
   IconName,
+  Image,
   Justification,
   LinkButton,
   Markup,
   Orientation,
   PackEnd,
+  PackType,
   Revealer,
   Span,
 } from "react-gjs-renderer";
-import { useSlackMarkdown } from "../../../../hooks/use-slack-markdown";
+import { ImageIndex } from "../../../../quarks/image-index";
 import { FontSettings } from "../../../../quarks/settings/font-size";
 import { UsersIndex } from "../../../../quarks/users-index";
-import type { SlackMessage } from "../../../../services/slack-service/slack-service";
+import type {
+  MessageBlock,
+  MessageBlockRichText,
+  MessageFile,
+  SlackMessage,
+} from "../../../../services/slack-service/slack-service";
 import { SlackService } from "../../../../services/slack-service/slack-service";
 import { AppMarkup } from "../../../app-markup/app-markup";
+import { FontMod, FontSize } from "../../../font-size/font-size-context";
 import { Timestamp } from "../../../timestamp/timestamp";
 import { UserProfilePicture } from "../../../user-profile-picture/user-profile-picture";
 import { Thread } from "./thread";
 
 type MessageBoxProps = {
-  markdown?: string;
+  contents?: MessageBlockRichText[];
   userID?: string;
   username?: string;
   sentAt?: number;
   subThreadMessage?: boolean;
   subthread?: SlackMessage[];
+  files: MessageFile[];
+};
+
+const UserName = (props: { userID: string }) => {
+  const userInfo = UsersIndex.useUser(props.userID);
+
+  React.useEffect(() => {
+    if (!userInfo && props.userID) {
+      SlackService.users.getUser(props.userID);
+    }
+  }, [userInfo, props.userID]);
+
+  return (
+    <Span fontWeight={"bold"} color="blue">
+      {userInfo?.name ?? ""}
+    </Span>
+  );
+};
+
+const renderNode = (node: MessageBlock, key: string): JSX.Element => {
+  // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
+  switch (node.type) {
+    case "text": {
+      return <Span key={key}>{node.text}</Span>;
+    }
+    case "emoji":
+      return (
+        <Span key={key} fontWeight="bold">
+          :{node.name}:
+        </Span>
+      );
+    case "user":
+      return <UserName key={key} userID={node.user_id} />;
+    case "rich_text":
+      return (
+        <Fragment key={key}>
+          {node.elements.map((elem, id) => renderNode(elem, `${key}-${id}`))}
+        </Fragment>
+      );
+    case "rich_text_section":
+      return (
+        <Fragment key={key}>
+          {node.elements.map((elem, id) => renderNode(elem, `${key}-${id}`))}
+        </Fragment>
+      );
+  }
+
+  console.log(node);
+  return <Fragment key={key}></Fragment>;
+};
+
+const AttachmentImage = (props: { file: MessageFile }) => {
+  const file = ImageIndex.useAttachmentImage(props.file.id);
+
+  React.useEffect(() => {
+    if (!file && props.file.id != null) {
+      SlackService.channels.getAttachmentFile(props.file);
+    }
+  }, [file]);
+
+  if (file) {
+    return <Image horizontalAlign={Align.START} src={file?.fileLocation} />;
+  }
+
+  return <></>;
 };
 
 const MessageBoxImpl = (props: MessageBoxProps) => {
   const userInfo = UsersIndex.useUser(props.userID);
-  const mdNodes = useSlackMarkdown(props.markdown ?? "");
   const font = FontSettings.use();
 
   const [showSubThread, setShowSubThread] = React.useState(false);
-
-  const renderNode = React.useCallback((node: MdNode, key: string) => {
-    // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
-    switch (node.type) {
-      case "text": {
-        return <Span key={key}>{node.text}</Span>;
-      }
-      case "bold":
-        return (
-          <Span key={key} fontWeight="bold">
-            {node.block.map((subNode, i) => renderNode(subNode, i.toString()))}
-          </Span>
-        );
-      case "italic":
-        return (
-          <Span key={key} fontStyle="italic">
-            {node.block.map((subNode, i) => renderNode(subNode, i.toString()))}
-          </Span>
-        );
-      case "strike":
-        return (
-          <Span key={key} strikethrough>
-            {node.block.map((subNode, i) => renderNode(subNode, i.toString()))}
-          </Span>
-        );
-      case "link":
-        if (node.url) {
-          return (
-            <Anchor href={node.url} key={key}>
-              {node.block.map((subNode, i) =>
-                renderNode(subNode, i.toString())
-              )}
-            </Anchor>
-          );
-        } else {
-          <Span key={key}>
-            {node.block.map((subNode, i) => renderNode(subNode, i.toString()))}
-          </Span>;
-        }
-    }
-  }, []);
 
   React.useEffect(() => {
     if (!userInfo && props.userID) {
@@ -125,50 +154,72 @@ const MessageBoxImpl = (props: MessageBoxProps) => {
             orientation={Orientation.HORIZONTAL}
             horizontalAlign={Align.FILL}
           >
-            <AppMarkup
-              verticalAlign={Align.CENTER}
-              horizontalAlign={Align.START}
-              justify={Justification.LEFT}
-              fontSizeMultiplier={1.1}
-            >
-              <Span fontWeight={"bold"}>
-                {userInfo?.name ?? props.username ?? ""}
-              </Span>
-            </AppMarkup>
+            <FontSize size={FontMod.enlarge.by10}>
+              <AppMarkup
+                verticalAlign={Align.CENTER}
+                horizontalAlign={Align.START}
+                justify={Justification.LEFT}
+              >
+                <Span fontWeight={"bold"}>
+                  {userInfo?.name ?? props.username ?? ""}
+                </Span>
+              </AppMarkup>
+            </FontSize>
             {props.sentAt ? <Timestamp timestamp={props.sentAt} /> : <></>}
-            <PackEnd element={Box} orientation={Orientation.HORIZONTAL}>
-              <Button
-                type={ButtonType.FLAT}
-                icon={IconName.FaceLaughSymbolic}
-                iconPixelSize={16}
-              />
-              {!props.subThreadMessage && (
+            <PackEnd>
+              <Box
+                cpt:pack-type={PackType.END}
+                orientation={Orientation.HORIZONTAL}
+              >
                 <Button
                   type={ButtonType.FLAT}
-                  icon={IconName.MailReplySenderSymbolic}
+                  icon={IconName.FaceLaughSymbolic}
                   iconPixelSize={16}
+                  tooltip="Add Reaction"
                 />
-              )}
-              <Button
-                type={ButtonType.FLAT}
-                icon={IconName.BookmarkNewSymbolic}
-                iconPixelSize={16}
-              />
+                {!props.subThreadMessage && (
+                  <Button
+                    type={ButtonType.FLAT}
+                    icon={IconName.MailReplySenderSymbolic}
+                    iconPixelSize={16}
+                    tooltip="Reply"
+                  />
+                )}
+                <Button
+                  type={ButtonType.FLAT}
+                  icon={IconName.BookmarkNewSymbolic}
+                  iconPixelSize={16}
+                  tooltip="Save"
+                />
+              </Box>
             </PackEnd>
           </Box>
-          <Markup
-            margin={10}
-            selectable
-            horizontalAlign={Align.START}
-            justify={Justification.LEFT}
-            style={{
-              caretColor: "rgba(0, 0, 0, 0)",
-            }}
-          >
-            <Span fontSize={font.value.msgSize}>
-              {mdNodes.map((node, i) => renderNode(node, i.toString()))}
-            </Span>
-          </Markup>
+          {props.contents && (
+            <Markup
+              margin={10}
+              selectable
+              horizontalAlign={Align.START}
+              justify={Justification.LEFT}
+              style={{
+                caretColor: "rgba(0, 0, 0, 0)",
+              }}
+            >
+              <Span fontSize={font.value.msgSize}>
+                {props.contents.map((node, i) =>
+                  renderNode(node, i.toString())
+                )}
+              </Span>
+            </Markup>
+          )}
+          <Box horizontalAlign={Align.START} expandHorizontal>
+            {props.files.map((f, idx) =>
+              f.mimetype?.startsWith("image/") ? (
+                <AttachmentImage key={f.id ?? idx} file={f} />
+              ) : (
+                <></>
+              )
+            )}
+          </Box>
           {props.subthread?.length ? (
             <LinkButton
               horizontalAlign={Align.START}

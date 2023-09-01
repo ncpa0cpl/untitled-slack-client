@@ -1,18 +1,25 @@
 import { DateTime } from "luxon";
 import React from "react";
+import { PureBetterComponent } from "react-better-components";
 import { Align, Popover, PositionType, Span } from "react-gjs-renderer";
 import { AppMarkup } from "../app-markup/app-markup";
+import { FontSize } from "../font-size/font-size-context";
 import { MouseTracker } from "../mouse-tracker/mouse-tracker";
 
 export type TimestampProps = {
   timestamp: number;
 };
 
-const FONT_SIZE_MULTIPLIER = 0.875;
+const FONT_SIZE_MULTIPLIER = (prev: number) => prev * 0.875;
 
-export const Timestamp = (props: TimestampProps) => {
-  const formattedShortTime = React.useMemo(() => {
-    const date = DateTime.fromMillis(props.timestamp).toLocal();
+export class Timestamp extends PureBetterComponent<TimestampProps> {
+  private formatted = this.$computed(
+    () => this.getFormatted(),
+    [this.depend.timestamp]
+  );
+
+  private getFormatted() {
+    const datetime = DateTime.fromSeconds(this.props.timestamp).toLocal();
 
     /**
      * If the timestamp is within last week - show "x days ago at
@@ -28,54 +35,57 @@ export const Timestamp = (props: TimestampProps) => {
 
       return `${value.toFixed(0)} ${unit}${
         value > 1 ? "s" : ""
-      } ago at ${date.toLocaleString(DateTime.TIME_SIMPLE)}`;
+      } ago at ${datetime.toLocaleString(DateTime.TIME_SIMPLE)}`;
     };
 
-    const diff = now.diff(date, ["years", "months", "weeks", "days"]);
+    let short = "";
+    const diff = now.diff(datetime, ["years", "months", "weeks", "days"]);
     if (diff.years > 0) {
-      return format(diff.years, "year");
+      short = format(diff.years, "year");
     } else if (diff.months > 0) {
-      return format(diff.months, "month");
+      short = format(diff.months, "month");
     } else if (diff.weeks > 0) {
-      return format(diff.weeks, "week");
+      short = format(diff.weeks, "week");
     } else if (diff.days >= 1) {
       if (diff.days < 2) {
-        return `Yesterday at ${date.toLocaleString(DateTime.TIME_SIMPLE)}`;
+        short = `Yesterday at ${datetime.toLocaleString(DateTime.TIME_SIMPLE)}`;
+      } else {
+        short = format(diff.days, "day");
       }
-      return format(diff.days, "day");
+    } else {
+      short = datetime.toLocaleString(DateTime.TIME_SIMPLE);
     }
 
-    return date.toLocaleString(DateTime.TIME_SIMPLE);
-  }, [props.timestamp]);
+    const full = datetime.toLocaleString(DateTime.DATETIME_MED_WITH_WEEKDAY);
 
-  const formattedFullDateTime = React.useMemo(() => {
-    const date = DateTime.fromMillis(props.timestamp).toLocal();
-    return date.toLocaleString(DateTime.DATETIME_MED_WITH_WEEKDAY);
-  }, [props.timestamp]);
+    return { short, full };
+  }
 
-  return (
-    <Popover
-      verticalAlign={Align.CENTER}
-      isModal={false}
-      position={PositionType.TOP}
-      renderPopover={() => (
-        <AppMarkup fontSizeMultiplier={FONT_SIZE_MULTIPLIER} margin={[6, 12]}>
-          {formattedFullDateTime}
-        </AppMarkup>
-      )}
-      renderAnchor={(open, hide) => (
-        <MouseTracker
+  render() {
+    return (
+      <FontSize size={FONT_SIZE_MULTIPLIER}>
+        <Popover
           verticalAlign={Align.CENTER}
-          onMouseEnter={open}
-          onMouseLeave={hide}
-        >
-          <AppMarkup fontSizeMultiplier={FONT_SIZE_MULTIPLIER} margin={[0, 10]}>
-            <Span alpha={"80%"} underline="single">
-              {formattedShortTime}
-            </Span>
-          </AppMarkup>
-        </MouseTracker>
-      )}
-    />
-  );
-};
+          isModal={false}
+          position={PositionType.TOP}
+          renderPopover={() => (
+            <AppMarkup margin={[6, 12]}>{this.formatted.get().full}</AppMarkup>
+          )}
+          renderAnchor={(open, hide) => (
+            <MouseTracker
+              verticalAlign={Align.CENTER}
+              onMouseEnter={open}
+              onMouseLeave={hide}
+            >
+              <AppMarkup margin={[0, 10]}>
+                <Span alpha={"80%"} underline="single">
+                  {this.formatted.get().short}
+                </Span>
+              </AppMarkup>
+            </MouseTracker>
+          )}
+        />
+      </FontSize>
+    );
+  }
+}

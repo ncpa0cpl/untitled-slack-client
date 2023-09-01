@@ -1,31 +1,57 @@
 import React from "react";
 import { Align, Box } from "react-gjs-renderer";
-import type { SlackMessage } from "../../../../services/slack-service/slack-service";
+import type {
+  MessageBlockRichText,
+  SlackMessage,
+} from "../../../../services/slack-service/slack-service";
 import { MessageEditor } from "../../../message-editor/message-editor";
 import { MessageBox } from "./message";
 
 export type ThreadProps = {};
+
+const textMock = (text: string): MessageBlockRichText[] => {
+  return [
+    {
+      type: "rich_text",
+      block_id: "",
+      elements: [
+        {
+          type: "rich_text_section",
+          elements: [
+            {
+              type: "text",
+              text,
+            },
+          ],
+        },
+      ],
+    },
+  ];
+};
 
 export const Thread = (props: ThreadProps) => {
   // stub
   const messages: SlackMessage[] = [
     {
       id: "1",
-      markdown: "Hello",
+      contents: textMock("Hello"),
       timestamp: 1675869151440,
       username: "John Doe",
+      files: [],
     },
     {
       id: "2",
-      markdown: "Oh, hi!",
+      contents: textMock("Oh, hi!"),
       timestamp: 1675869152440,
       username: "Jane Gondo",
+      files: [],
     },
     {
       id: "3",
-      markdown: "How are you?",
+      contents: textMock("How are you?"),
       timestamp: 1675869153440,
       username: "John Doe",
+      files: [],
     },
   ];
 
@@ -34,10 +60,11 @@ export const Thread = (props: ThreadProps) => {
       {messages.map((message) => (
         <MessageBox
           key={message.id}
-          markdown={message.markdown}
+          contents={message.contents}
           userID={message.userID}
           username={message.username}
           sentAt={message.timestamp}
+          files={message.files}
           subThreadMessage
         />
       ))}

@@ -1,14 +1,15 @@
+import Fs from "fs-gjs";
 import envs from "gapp:env";
-import Gio from "gi://Gio";
 import GLib from "gi://GLib";
+import Gio from "gi://Gio";
 import path from "path";
 import { quark } from "react-quarks";
 import { QuarkFileSyncService } from "../services/quark-file-sync-service/quark-file-sync-service";
-import { fileExists, writeFile } from "../utils/fs/fs-utils";
 
 export enum ImageType {
   ProfilePicture = "profile-picture",
   UserContent = "user-content",
+  Attachment = "attachment",
 }
 
 export type ProfilePicture = {
@@ -24,7 +25,13 @@ export type UserImage = {
   fileLocation: string;
 };
 
-export type Image = ProfilePicture | UserImage;
+export type AttachmentImage = {
+  type: ImageType.Attachment;
+  contentID: string;
+  fileLocation: string;
+};
+
+export type Image = ProfilePicture | UserImage | AttachmentImage;
 
 const IMAGES_DIR = path.resolve(
   GLib.get_user_config_dir(),
@@ -32,7 +39,7 @@ const IMAGES_DIR = path.resolve(
   "images"
 );
 
-if (!fileExists(IMAGES_DIR))
+if (!Fs.sync.fileExists(IMAGES_DIR))
   Gio.File.new_for_path(IMAGES_DIR).make_directory_with_parents(null);
 
 export const ImageIndex = quark(
@@ -67,7 +74,7 @@ export const ImageIndex = quark(
           const filename = `upfp_${uid}_x${image.size}.png`;
           const fileLocation = path.resolve(IMAGES_DIR, filename);
 
-          await writeFile(fileLocation, image.buffer);
+          await Fs.writeFile(fileLocation, image.buffer);
 
           newImages.push({
             uid,
@@ -86,13 +93,30 @@ export const ImageIndex = quark(
         const filename = `uc_image_${contentID}.png`;
         const fileLocation = path.resolve(IMAGES_DIR, filename);
 
-        await writeFile(fileLocation, image);
+        await Fs.writeFile(fileLocation, image);
 
         return {
           ...state,
           images: state.images.concat([
             {
               type: ImageType.UserContent,
+              fileLocation,
+              contentID,
+            },
+          ]),
+        };
+      },
+      async addAttachmentImage(state, contentID: string, image: Uint8Array) {
+        const filename = `attachment_image_${contentID}.png`;
+        const fileLocation = path.resolve(IMAGES_DIR, filename);
+
+        await Fs.writeFile(fileLocation, image);
+
+        return {
+          ...state,
+          images: state.images.concat([
+            {
+              type: ImageType.Attachment,
               fileLocation,
               contentID,
             },
@@ -136,6 +160,12 @@ export const ImageIndex = quark(
           (image) =>
             image.type === ImageType.UserContent &&
             image.contentID === contentID
+        );
+      },
+      useAttachmentImage(state, contentID?: string) {
+        return state.images.find(
+          (image) =>
+            image.type === ImageType.Attachment && image.contentID === contentID
         );
       },
     },

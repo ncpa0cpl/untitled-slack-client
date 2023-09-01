@@ -1,26 +1,22 @@
 import React from "react";
+import { BetterComponent } from "react-better-components";
 import { Markup, Span } from "react-gjs-renderer";
-import { FontSettings } from "../../quarks/settings/font-size";
+import { FontSizeContext } from "../font-size/font-size-context";
 
-export type AppMarkupProps = JSX.IntrinsicElements["MARKUP"] & {
-  fontSizeMultiplier?: number;
-};
+export type AppMarkupProps = JSX.IntrinsicElements["MARKUP"];
 
-export const AppMarkup = ({
-  children,
-  fontSizeMultiplier,
-  ...props
-}: AppMarkupProps) => {
-  const fontSettings = FontSettings.useUiSettings();
+export class AppMarkup extends BetterComponent<AppMarkupProps> {
+  render() {
+    const { children, ...props } = this.props;
 
-  const fontSize = React.useMemo(
-    () => Math.round(fontSettings * (fontSizeMultiplier ?? 1)),
-    [fontSettings, fontSizeMultiplier]
-  );
-
-  return (
-    <Markup {...props}>
-      <Span fontSize={fontSize}>{children}</Span>
-    </Markup>
-  );
-};
+    return (
+      <FontSizeContext.Consumer>
+        {(fontSize) => (
+          <Markup {...props}>
+            <Span fontSize={fontSize}>{children}</Span>
+          </Markup>
+        )}
+      </FontSizeContext.Consumer>
+    );
+  }
+}

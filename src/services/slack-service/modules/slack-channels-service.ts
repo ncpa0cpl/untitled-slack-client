@@ -2,13 +2,15 @@ import type {
   Channel,
   ConversationsListResponse,
 } from "@slack/web-api/dist/response/ConversationsListResponse";
+import type { AxiosResponse } from "axios";
+import { ImageIndex } from "../../../quarks/image-index";
 import type { ConversationChannel } from "../../../quarks/slack/conversations";
 import {
-  Conversations,
   ConversationType,
+  Conversations,
 } from "../../../quarks/slack/conversations";
 import { generateUID } from "../../../utils/generate-uid";
-import type { SlackMessage, SlackService } from "../slack-service";
+import type { MessageFile, SlackMessage, SlackService } from "../slack-service";
 
 type UserCounts = {
   ok: boolean;
@@ -135,6 +137,31 @@ export class SlackChannelsService {
     );
   }
 
+  async getAttachmentFile(file: MessageFile) {
+    const client = this.mainService.getClient();
+
+    const url = file.url_private_download;
+
+    if (!url || !file.id) {
+      return;
+    }
+
+    try {
+      const config = {
+        responseType: "arraybuffer",
+        data: {},
+      };
+
+      const response: AxiosResponse = await client.axios.get(url, config);
+
+      if (response.status === 200) {
+        ImageIndex.addAttachmentImage(file.id, new Uint8Array(response.data));
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   async fetchMessages(channelID: string, cursor?: string) {
     const client = this.mainService.getClient();
 
@@ -151,23 +178,25 @@ export class SlackChannelsService {
     const result: SlackMessage[] = [];
 
     for (const message of response.messages ?? []) {
-      const timestamp = message.ts ? Number(message.ts) * 1000 : undefined;
+      const timestamp = message.ts ? Number(message.ts) : undefined;
 
       if (!message.user) {
         result.push({
-          id: generateUID(12),
-          markdown: message.text ?? "",
+          id: message.client_msg_id ?? generateUID(36),
+          contents: (message.blocks as any) ?? [],
           timestamp: timestamp,
           username: message.username ?? message.bot_profile?.name ?? "",
+          files: message.files ?? [],
         });
         continue;
       }
 
       result.push({
-        id: generateUID(12),
-        markdown: message.text ?? "",
+        id: message.client_msg_id ?? generateUID(36),
+        contents: (message.blocks as any) ?? "",
         timestamp: timestamp,
         userID: message.user,
+        files: message.files ?? [],
       });
     }
 

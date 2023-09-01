@@ -1,5 +1,5 @@
 import React from "react";
-import { Align, Box, Orientation } from "react-gjs-renderer";
+import { Align, Orientation, Paned } from "react-gjs-renderer";
 import { SlackClient } from "../../quarks/slack/slack-client";
 import { SlackUser } from "../../quarks/user";
 import { SlackService } from "../../services/slack-service/slack-service";
@@ -24,7 +24,7 @@ export const Chat = () => {
   }
 
   return (
-    <Box
+    <Paned
       expand
       verticalAlign={Align.FILL}
       horizontalAlign={Align.FILL}
@@ -32,6 +32,6 @@ export const Chat = () => {
     >
       <ConversationList />
       <ConversationBox />
-    </Box>
+    </Paned>
   );
 };

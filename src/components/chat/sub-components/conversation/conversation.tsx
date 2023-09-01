@@ -1,4 +1,5 @@
 import React from "react";
+import { BetterComponent } from "react-better-components";
 import {
   Align,
   Box,
@@ -11,170 +12,353 @@ import {
 import type { ScrollBoxEvent } from "react-gjs-renderer/dist/gjs-elements/gtk3/scroll-box/scroll-box";
 import { ActiveConversation } from "../../../../quarks/slack/conversations";
 import { SlackClient } from "../../../../quarks/slack/slack-client";
-import type { SlackMessage } from "../../../../services/slack-service/slack-service";
+import type {
+  MessageBlockRichText,
+  SlackMessage,
+} from "../../../../services/slack-service/slack-service";
 import { SlackService } from "../../../../services/slack-service/slack-service";
+import { $quark } from "../../../../utils/class-quark-hook";
+import { Bound } from "../../../../utils/decorators/bound";
+import { FontMod, FontSize } from "../../../font-size/font-size-context";
+import { MessageEditor } from "../../../message-editor/message-editor";
 import { ConversationHeader } from "./conversation-header";
 import { MessageBox } from "./message";
+import { UserTyping } from "./user-typing";
 
-export const ConversationBox = () => {
-  const scrollBoxRef = React.useRef<Rg.Element.ScrollBoxElement | null>(null);
-  const isFirstUserScroll = React.useRef(true);
-  const lastPosFromBottom = React.useRef(0);
-  const loadingInProgress = React.useRef(false);
-  const ws = React.useRef<WebSocket | null>(null);
+type WsHello = {
+  type: "hello";
+  fast_reconnect: boolean;
+  region: string;
+  start: boolean;
+  host_id: string;
+};
 
-  const currentConversation = ActiveConversation.use();
-  const slackClient = SlackClient.use();
+type WsUserTyping = {
+  type: "user_typing";
+  channel: string;
+  id: number;
+  user: string;
+};
 
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [loadError, setLoadError] = React.useState<any>(null);
-  const [messages, setMessages] = React.useState<SlackMessage[]>([]);
-  const [cursor, setCursor] = React.useState<string | undefined>();
+type MsgBlock = MessageBlockRichText;
 
-  const scrollHandler = React.useCallback((e: ScrollBoxEvent) => {
-    if (loadingInProgress.current) {
+type WsMessage = {
+  type: "message";
+  channel: string;
+  text: string;
+  blocks: Array<MsgBlock>;
+  user: string;
+  client_msg_id: string;
+  team: string;
+  source_team: string;
+  user_team: string;
+  suppress_notification: boolean;
+  event_ts: string;
+  ts: string;
+};
+
+type WsSlackNotification = WsHello | WsUserTyping | WsMessage;
+
+type PostMessageResponse = {
+  ok: boolean;
+  channel: string;
+  ts: string;
+  message: {
+    type: "message";
+    text: string;
+    user: string;
+    ts: string;
+    blocks: Array<MsgBlock>;
+    team: string;
+  };
+};
+
+function sortMsgs(a: SlackMessage, b: SlackMessage) {
+  return (a.timestamp ?? 0) - (b.timestamp ?? 0);
+}
+
+export class ConversationBox extends BetterComponent {
+  private scrollBoxRef = React.createRef<Rg.Element.ScrollBoxElement | null>();
+  private isFirstUserScroll = true;
+  private lastPosFromBottom = 0;
+  private loadingInProgress = false;
+  private ws: WebSocket | null = null;
+
+  private currentConversation = $quark(this, ActiveConversation);
+  private slackClient = $quark(this, SlackClient, (s) => s.client);
+
+  private isLoading = this.$state(false);
+  private loadError = this.$state<any>(null);
+  private messages = this.$state<SlackMessage[]>([]);
+  private cursor = this.$state<string | undefined>(undefined);
+  private usersTyping = this.$state<{ uid: string; ts: number }[]>([]);
+
+  constructor(props: any) {
+    super(props);
+
+    this.$effect(() => {
+      this.connectWs();
+    }, [this.currentConversation, this.slackClient]);
+
+    this.$effect(() => {
+      const timeouts = this.usersTyping.get().map((u) => {
+        return setTimeout(() => {
+          this.usersTyping.set((ut) => ut.filter((u2) => u2.uid !== u.uid));
+        }, Math.max(0, 5000 - (Date.now() - u.ts)));
+      });
+
+      return () => {
+        timeouts.forEach((t) => clearTimeout(t));
+      };
+    }, [this.usersTyping]);
+  }
+
+  private async connectWs() {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+
+    if (this.slackClient.get()) {
+      try {
+        await this.loadMessages(undefined, true);
+
+        this.isFirstUserScroll = true;
+
+        const context = await this.slackClient.get()?.rtm.connect();
+
+        if (context && context.ok) {
+          this.ws = new WebSocket(context!.url!);
+          this.ws.onmessage = this.onWsEvent;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  }
+
+  @Bound()
+  private onWsEvent(e: MessageEvent) {
+    const data = JSON.parse(e.data) as WsSlackNotification;
+
+    switch (data.type) {
+      case "message": {
+        if (data.channel === this.currentConversation.get()?.id) {
+          const msg: SlackMessage = {
+            id: data.client_msg_id,
+            contents: data.blocks,
+            timestamp: Number(data.ts),
+            userID: data.user,
+            files: [],
+          };
+
+          const ut = this.usersTyping.get();
+          if (!ut.some((u) => u.uid === data.user)) {
+            this.usersTyping.set(ut.filter((u) => u.uid !== data.user));
+          }
+          this.messages.set(this.messages.get().concat(msg));
+        }
+        break;
+      }
+      case "user_typing": {
+        if (data.channel === this.currentConversation.get()?.id) {
+          this.usersTyping.set((ut) =>
+            ut
+              .filter((u) => u.uid !== data.user)
+              .concat({
+                uid: data.user,
+                ts: Date.now(),
+              })
+          );
+        }
+      }
+    }
+  }
+
+  @Bound()
+  private scrollHandler(e: ScrollBoxEvent) {
+    if (this.loadingInProgress) {
       e.preventDefault();
     }
 
-    isFirstUserScroll.current = false;
+    this.isFirstUserScroll = false;
 
-    if (scrollBoxRef.current) {
-      lastPosFromBottom.current =
-        scrollBoxRef.current.currentPosition("bottom");
+    if (this.scrollBoxRef.current) {
+      this.lastPosFromBottom =
+        this.scrollBoxRef.current.currentPosition("bottom");
     }
-  }, []);
+  }
 
-  const contentSizeChangeHandler = React.useCallback(() => {
-    const scrollBox = scrollBoxRef.current;
+  @Bound()
+  private contentSizeChangeHandler() {
+    const scrollBox = this.scrollBoxRef.current;
     if (!scrollBox) return;
 
-    if (isFirstUserScroll.current) {
+    if (this.isFirstUserScroll) {
       scrollBox.scrollTo(0, "bottom");
     } else {
-      scrollBox.scrollTo(lastPosFromBottom.current, "bottom");
+      scrollBox.scrollTo(this.lastPosFromBottom, "bottom");
     }
-  }, []);
+  }
 
-  const loadMessages = React.useCallback(
-    (nextCursor?: string, reset = false) => {
-      if (!currentConversation.value || loadingInProgress.current)
-        return Promise.resolve();
+  @Bound()
+  private handleEdgeReached(
+    e: ScrollBoxEvent<{
+      position: PositionType;
+    }>
+  ) {
+    if (e.position === PositionType.TOP) {
+      this.loadMessages(this.cursor.get());
+    }
+  }
 
-      loadingInProgress.current = true;
+  private async loadMessages(nextCursor?: string, reset = false) {
+    if (!this.currentConversation.get() || this.loadingInProgress) {
+      return Promise.resolve();
+    }
 
-      setIsLoading(true);
-      setLoadError(null);
+    this.loadingInProgress = true;
 
-      if (reset) {
-        setMessages([]);
-        setCursor(undefined);
-        isFirstUserScroll.current = true;
+    this.isLoading.set(true);
+    this.loadError.set(null);
+
+    if (reset) {
+      this.messages.set([]);
+      this.cursor.set(undefined);
+      this.isFirstUserScroll = true;
+    }
+
+    try {
+      const response = await SlackService.channels.fetchMessages(
+        this.currentConversation.get()!.id,
+        nextCursor
+      );
+
+      let newMessages = response.messages;
+
+      if (!reset) {
+        newMessages = newMessages.concat(this.messages.get());
+      } else {
+        newMessages = newMessages.slice();
       }
 
-      return new Promise<void>(async (resolve) => {
-        try {
-          const response = await SlackService.channels.fetchMessages(
-            currentConversation.value!.id,
-            nextCursor
-          );
+      newMessages.sort(sortMsgs);
 
-          setMessages((current) => [...response.messages, ...current]);
-          setCursor(response.cursor);
-        } catch (err) {
-          setLoadError(err);
-        } finally {
-          setIsLoading(false);
-          setTimeout(() => {
-            loadingInProgress.current = false;
-            resolve();
-          }, 100);
-        }
+      this.messages.set(newMessages);
+      this.cursor.set(response.cursor);
+    } catch (err) {
+      this.loadError.set(err);
+    } finally {
+      this.isLoading.set(false);
+    }
+
+    return new Promise<void>(async (resolve) => {
+      setTimeout(() => {
+        this.loadingInProgress = false;
+        resolve();
+      }, 100);
+    });
+  }
+
+  @Bound()
+  private async handleSend(text: string) {
+    console.log(text);
+    const channelID = this.currentConversation.get()?.id;
+    const client = this.slackClient.get();
+
+    if (channelID && client) {
+      const response = await client.chat.postMessage({
+        channel: channelID,
+        mrkdwn: true,
+        text,
+        as_user: true,
       });
-    },
-    [currentConversation.value]
-  );
 
-  React.useEffect(() => {
-    if (ws.current) {
-      ws.current.close();
-      ws.current = null;
+      console.log(response);
     }
+  }
 
-    if (slackClient.value.client) {
-      loadMessages(undefined, true)
-        .then(async () => {
-          isFirstUserScroll.current = true;
-
-          // const context = await slackClient.value.client?.rtm.connect();
-
-          // if (context && context.ok) {
-          //   ws.current = new WebSocket(context!.url!);
-          //   ws.current.onmessage = (e) => {
-          //     console.log(e.data);
-          //   };
-          // }
-        })
-        .catch(console.error);
-    }
-  }, [currentConversation.value, slackClient.value.client]);
-
-  return (
-    <Box expand verticalAlign={Align.FILL} horizontalAlign={Align.FILL}>
-      <ConversationHeader title={currentConversation.value?.name ?? ""} />
-      {isLoading && (
-        <Box
-          expand={messages.length === 0}
-          verticalAlign={Align.CENTER}
-          horizontalAlign={Align.CENTER}
-        >
-          <Spinner margin={[15, 0]} />
-        </Box>
-      )}
-      {messages.length > 0 && (
-        <ScrollBox
-          ref={scrollBoxRef}
-          onScroll={scrollHandler}
-          onContentSizeChange={contentSizeChangeHandler}
-          onEdgeReached={(e) => {
-            if (e.position === PositionType.TOP) {
-              loadMessages(cursor);
-            }
-          }}
-          expand
-          verticalAlign={Align.FILL}
-          horizontalAlign={Align.FILL}
-        >
+  public render() {
+    return (
+      <Box expand verticalAlign={Align.FILL} horizontalAlign={Align.FILL}>
+        <ConversationHeader
+          title={this.currentConversation.get()?.name ?? ""}
+        />
+        {this.isLoading.get() && (
           <Box
+            expand={this.messages.get().length === 0}
+            verticalAlign={Align.CENTER}
+            horizontalAlign={Align.CENTER}
+          >
+            <Spinner margin={[15, 0]} />
+          </Box>
+        )}
+        {this.messages.get().length > 0 && (
+          <ScrollBox
+            ref={this.scrollBoxRef}
+            onScroll={this.scrollHandler}
+            onContentSizeChange={this.contentSizeChangeHandler}
+            onEdgeReached={this.handleEdgeReached}
             expand
-            orientation={Orientation.VERTICAL}
-            margin={[0, 0, 15]}
-            verticalAlign={isLoading ? Align.CENTER : Align.END}
+            verticalAlign={Align.FILL}
             horizontalAlign={Align.FILL}
           >
-            {loadError ? (
-              <Label
-                verticalAlign={Align.CENTER}
-                horizontalAlign={Align.CENTER}
-              >
-                Failed to load the conversation's messages.
-              </Label>
-            ) : (
-              messages.map((message, i) => (
-                <MessageBox
-                  key={message.id}
-                  markdown={message.markdown}
-                  userID={message.userID}
-                  username={message.username}
-                  sentAt={message.timestamp}
-                  subthread={
-                    i === messages.length - 1 ? [{} as any] : undefined
-                  }
-                />
-              ))
-            )}
+            <Box
+              expand
+              orientation={Orientation.VERTICAL}
+              margin={[0, 0, 15]}
+              verticalAlign={this.isLoading.get() ? Align.CENTER : Align.END}
+              horizontalAlign={Align.FILL}
+            >
+              {this.loadError.get() ? (
+                <Label
+                  verticalAlign={Align.CENTER}
+                  horizontalAlign={Align.CENTER}
+                >
+                  Failed to load the conversation's messages.
+                </Label>
+              ) : (
+                this.messages
+                  .get()
+                  .map((message, i) => (
+                    <MessageBox
+                      key={message.id}
+                      contents={message.contents}
+                      userID={message.userID}
+                      username={message.username}
+                      sentAt={message.timestamp}
+                      files={message.files}
+                      subthread={
+                        i === this.messages.get().length - 1
+                          ? [{} as any]
+                          : undefined
+                      }
+                    />
+                  ))
+              )}
+            </Box>
+          </ScrollBox>
+        )}
+        <Box
+          expand={this.messages.get().length === 0}
+          horizontalAlign={Align.FILL}
+          verticalAlign={Align.END}
+          margin={[5, 15, 5]}
+        >
+          <MessageEditor onSend={this.handleSend} />
+          <Box
+            heightRequest={16}
+            horizontalAlign={Align.START}
+            margin={[5, 0, 0, 0]}
+          >
+            <FontSize size={FontMod.shrink.by30}>
+              {this.usersTyping.get().map((u) => (
+                <UserTyping key={u.ts.toString()} userID={u.uid} />
+              ))}
+            </FontSize>
           </Box>
-        </ScrollBox>
-      )}
-    </Box>
-  );
-};
+        </Box>
+      </Box>
+    );
+  }
+}

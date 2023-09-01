@@ -1,9 +1,9 @@
+import Fs from "fs-gjs";
 import env from "gapp:env";
-import Gio from "gi://Gio";
 import GLib from "gi://GLib";
+import Gio from "gi://Gio";
 import path from "path";
 import type { Quark } from "react-quarks";
-import { fileExists, readFile, writeFile } from "../../utils/fs/fs-utils";
 import { MutexStore } from "../../utils/mutex-store";
 
 const FILE_DATA_DIR = path.resolve(GLib.get_user_config_dir(), env.appName);
@@ -25,7 +25,7 @@ export class QuarkFileSyncService {
 
   private static async ensureAppDirExists() {
     try {
-      if (!fileExists(FILE_DATA_DIR))
+      if (!(await Fs.fileExists(FILE_DATA_DIR)))
         Gio.File.new_for_path(FILE_DATA_DIR).make_directory_with_parents(null);
     } catch (e) {
       console.log(e);
@@ -42,7 +42,7 @@ export class QuarkFileSyncService {
       const filePath = path.resolve(FILE_DATA_DIR, filename);
       const contents = JSON.stringify(object, null, 2);
 
-      await writeFile(filePath, contents, "utf8");
+      await Fs.writeTextFile(filePath, contents);
     } catch (e) {
       console.log(e);
     } finally {
@@ -57,8 +57,8 @@ export class QuarkFileSyncService {
   private static async load<T>(filename: string): Promise<T | undefined> {
     this.fileMutex.acquire(filename);
     try {
-      const data = await readFile(path.resolve(FILE_DATA_DIR, filename));
-      return JSON.parse(data.toString()) as T;
+      const data = await Fs.readTextFile(path.resolve(FILE_DATA_DIR, filename));
+      return JSON.parse(data) as T;
     } catch (e) {
       return undefined;
     } finally {
