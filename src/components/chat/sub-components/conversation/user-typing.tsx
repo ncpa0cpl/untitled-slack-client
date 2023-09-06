@@ -7,8 +7,9 @@ export const UserTyping = (props: { userID: string }) => {
   const userInfo = UsersIndex.useUser(props.userID);
 
   React.useEffect(() => {
-    if (!userInfo) {
-      SlackService.users.getUser(props.userID);
+    const service = SlackService.getService();
+    if (!userInfo && service) {
+      service.users.getUser(props.userID);
     }
   }, [userInfo]);
 

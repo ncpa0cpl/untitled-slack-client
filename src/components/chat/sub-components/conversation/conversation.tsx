@@ -11,12 +11,12 @@ import {
 } from "react-gjs-renderer";
 import type { ScrollBoxEvent } from "react-gjs-renderer/dist/gjs-elements/gtk3/scroll-box/scroll-box";
 import { ActiveConversation } from "../../../../quarks/slack/conversations";
-import { SlackClient } from "../../../../quarks/slack/slack-client";
+import { SlackQuark } from "../../../../quarks/slack/slack-client";
+import { SlackService } from "../../../../services/slack-service/slack-service";
 import type {
   MessageBlockRichText,
   SlackMessage,
-} from "../../../../services/slack-service/slack-service";
-import { SlackService } from "../../../../services/slack-service/slack-service";
+} from "../../../../services/slack-service/slack-types";
 import { $quark } from "../../../../utils/class-quark-hook";
 import { Bound } from "../../../../utils/decorators/bound";
 import { FontMod, FontSize } from "../../../font-size/font-size-context";
@@ -77,18 +77,21 @@ function sortMsgs(a: SlackMessage, b: SlackMessage) {
   return (a.timestamp ?? 0) - (b.timestamp ?? 0);
 }
 
+function selectCurrentWs(state: ReturnType<typeof SlackQuark.get>) {
+  return state.workspaces.find((w) => w.team === state.activeWorkspace)?.socket;
+}
+
 export class ConversationBox extends BetterComponent {
   private scrollBoxRef = React.createRef<Rg.Element.ScrollBoxElement | null>();
   private isFirstUserScroll = true;
   private lastPosFromBottom = 0;
   private loadingInProgress = false;
-  private ws: WebSocket | null = null;
 
   private currentConversation = $quark(this, ActiveConversation);
-  private slackClient = $quark(this, SlackClient, (s) => s.client);
+  private ws = $quark(this, SlackQuark, selectCurrentWs);
 
   private isLoading = this.$state(false);
-  private loadError = this.$state<any>(null);
+  private loadError = this.$state<Error | null>(null);
   private messages = this.$state<SlackMessage[]>([]);
   private cursor = this.$state<string | undefined>(undefined);
   private usersTyping = this.$state<{ uid: string; ts: number }[]>([]);
@@ -97,8 +100,8 @@ export class ConversationBox extends BetterComponent {
     super(props);
 
     this.$effect(() => {
-      this.connectWs();
-    }, [this.currentConversation, this.slackClient]);
+      return this.connectWs();
+    }, [this.currentConversation, this.ws]);
 
     this.$effect(() => {
       const timeouts = this.usersTyping.get().map((u) => {
@@ -113,27 +116,18 @@ export class ConversationBox extends BetterComponent {
     }, [this.usersTyping]);
   }
 
-  private async connectWs() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
+  private connectWs() {
+    try {
+      this.loadMessages(undefined, true);
+      this.isFirstUserScroll = true;
+      const socket = this.ws.get();
 
-    if (this.slackClient.get()) {
-      try {
-        await this.loadMessages(undefined, true);
-
-        this.isFirstUserScroll = true;
-
-        const context = await this.slackClient.get()?.rtm.connect();
-
-        if (context && context.ok) {
-          this.ws = new WebSocket(context!.url!);
-          this.ws.onmessage = this.onWsEvent;
-        }
-      } catch (err) {
-        console.error(err);
+      if (socket) {
+        socket.addEventListener("message", this.onWsEvent);
+        return () => socket.removeEventListener("message", this.onWsEvent);
       }
+    } catch (err) {
+      console.error(err);
     }
   }
 
@@ -228,13 +222,21 @@ export class ConversationBox extends BetterComponent {
       this.isFirstUserScroll = true;
     }
 
-    try {
-      const response = await SlackService.channels.fetchMessages(
+    const service = SlackService.getService();
+
+    if (service) {
+      const result = await service.channels.fetchMessages(
         this.currentConversation.get()!.id,
         nextCursor
       );
 
-      let newMessages = response.messages;
+      if (!result.ok) {
+        this.loadError.set(result.error);
+        this.isLoading.set(false);
+        return;
+      }
+
+      let newMessages = result.value.messages;
 
       if (!reset) {
         newMessages = newMessages.concat(this.messages.get());
@@ -245,10 +247,7 @@ export class ConversationBox extends BetterComponent {
       newMessages.sort(sortMsgs);
 
       this.messages.set(newMessages);
-      this.cursor.set(response.cursor);
-    } catch (err) {
-      this.loadError.set(err);
-    } finally {
+      this.cursor.set(result.value.cursor);
       this.isLoading.set(false);
     }
 
@@ -262,19 +261,11 @@ export class ConversationBox extends BetterComponent {
 
   @Bound()
   private async handleSend(text: string) {
-    console.log(text);
     const channelID = this.currentConversation.get()?.id;
-    const client = this.slackClient.get();
+    const service = SlackService.getService();
 
-    if (channelID && client) {
-      const response = await client.chat.postMessage({
-        channel: channelID,
-        mrkdwn: true,
-        text,
-        as_user: true,
-      });
-
-      console.log(response);
+    if (channelID && service) {
+      await service.channels.sendMessage(channelID, text);
     }
   }
 

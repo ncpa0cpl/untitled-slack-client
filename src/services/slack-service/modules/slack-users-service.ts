@@ -1,21 +1,32 @@
-import type { ProfilePicture } from "../../../quarks/image-index";
+import type { Image } from "../../../quarks/image-index";
 import { ImageIndex, ImageType } from "../../../quarks/image-index";
 import type { UserInfo } from "../../../quarks/users-index";
 import { UsersIndex } from "../../../quarks/users-index";
+import { RequestError } from "../../../utils/errors/fetch-error";
+import type { AsyncResult } from "../../../utils/result";
+import { AsyncAll, err, ok } from "../../../utils/result";
 import type { SlackService } from "../slack-service";
+import type {
+  UserProfilePictureBytes,
+  UserProfilePictureLink,
+} from "../slack-types";
 
 export class SlackUsersService {
-  constructor(private readonly mainService: typeof SlackService) {}
+  constructor(private readonly mainService: SlackService) {}
 
-  private async fetchUser(userID: string) {
-    const client = this.mainService.getClient();
+  private get client() {
+    return this.mainService.getClient();
+  }
 
-    const response = await client.users.info({
+  private async requestUserInfo(
+    userID: string
+  ): AsyncResult<UserInfo, RequestError> {
+    const response = await this.client.users.info({
       user: userID,
     });
 
     if (!response.ok) {
-      throw new Error(response.error);
+      return err(new RequestError(response.error, response));
     }
 
     const user: UserInfo = {
@@ -37,14 +48,13 @@ export class SlackUsersService {
       },
     };
 
-    return user;
+    return ok(user);
   }
 
-  private async fetchUsersProfilePictures(user: UserInfo) {
-    const pfps: {
-      link: string;
-      size: ProfilePicture["size"];
-    }[] = [];
+  private async requestUserProfilePicture(
+    user: UserInfo
+  ): AsyncResult<UserProfilePictureBytes[], Error[]> {
+    const pfps: UserProfilePictureLink[] = [];
 
     if (user.image.px1024) {
       pfps.push({
@@ -89,60 +99,77 @@ export class SlackUsersService {
       });
     }
 
-    const buffs: Promise<{
-      buffer: Uint8Array;
-      size: ProfilePicture["size"];
-    }>[] = [];
+    const buffs: AsyncResult<UserProfilePictureBytes>[] = [];
 
     for (const pfp of pfps) {
       const pfpBuff = fetch(pfp.link)
         .then((response) => response.arrayBuffer())
         .then((arrayBuffer) => new Uint8Array(arrayBuffer))
-        .then((buffer) => ({ buffer, size: pfp.size }));
+        .then((buffer) => ok({ buffer, size: pfp.size }))
+        .catch((error) => err(error));
 
       buffs.push(pfpBuff);
     }
 
-    return await Promise.all(buffs);
+    return await AsyncAll(buffs);
   }
 
   /**
    * Gets the user of the specified ID from the index, or if not
    * present fetches it and saves to the index.
    */
-  async getUser(userID: string) {
+  async getUser(userID: string): AsyncResult<UserInfo, RequestError> {
     const knownUsers = UsersIndex.get();
 
-    let user = knownUsers.users.find((user) => user.id === userID);
+    const user = knownUsers.users.find((user) => user.id === userID);
 
-    if (!user) {
-      user = await this.fetchUser(userID);
-      UsersIndex.addUser(user);
+    if (user) {
+      return ok(user);
     }
 
-    return user;
+    const result = await this.requestUserInfo(userID);
+
+    if (result.ok) {
+      UsersIndex.addUser(result.value);
+    }
+
+    return result;
   }
 
   /**
    * Gets the user profile picture of the specified ID from the
    * index, or if not present fetches it and saves to the index.
    */
-  async getUserProfilePictures(userID: string) {
+  async getUserProfilePicture(
+    userID: string
+  ): AsyncResult<Image[], RequestError | Error[]> {
     const pfps = ImageIndex.get().images.filter(
       (image) => image.type === ImageType.ProfilePicture && image.uid === userID
     );
 
     if (pfps.length === 0) {
-      const user = await this.getUser(userID);
-      const userPfps = await this.fetchUsersProfilePictures(user);
-      await ImageIndex.addProfilePictures(userID, userPfps);
+      const result = await this.getUser(userID);
 
-      return ImageIndex.get().images.filter(
-        (image) =>
-          image.type === ImageType.ProfilePicture && image.uid === userID
+      if (!result.ok) {
+        return result;
+      }
+
+      const userPfps = await this.requestUserProfilePicture(result.value);
+
+      if (!userPfps.ok) {
+        return userPfps;
+      }
+
+      await ImageIndex.addProfilePictures(userID, userPfps.value);
+
+      return ok(
+        ImageIndex.get().images.filter(
+          (image) =>
+            image.type === ImageType.ProfilePicture && image.uid === userID
+        )
       );
     }
 
-    return pfps;
+    return ok(pfps);
   }
 }

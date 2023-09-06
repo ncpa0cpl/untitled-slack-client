@@ -9,7 +9,7 @@ import {
 } from "react-gjs-renderer";
 import { useAsyncOperation } from "../../hooks/use-async-operation";
 import { navigate } from "../../main-stack";
-import { SlackUser } from "../../quarks/user";
+import { UserQuark } from "../../quarks/user";
 import { SlackService } from "../../services/slack-service/slack-service";
 import { AppMarkup } from "../app-markup/app-markup";
 
@@ -22,6 +22,7 @@ type AuthArg =
     }
   | {
       authVia: "token";
+      team: string;
       token: string;
       userId: string;
     };
@@ -36,8 +37,8 @@ const authOperation = async (args: AuthArg) => {
 
     return await SlackService.auth.logIn(team, email, password);
   } else {
-    const { token, userId } = args;
-    return await SlackService.auth.authorizeUser(token, userId);
+    const { team, token, userId } = args;
+    return await SlackService.auth.authorizeUser(team, token, userId);
   }
 };
 
@@ -57,7 +58,7 @@ const SignInInput = (props: {
 };
 
 export const SignInPanel = () => {
-  const currentUser = SlackUser.use();
+  const currentUser = UserQuark.use();
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -70,6 +71,7 @@ export const SignInPanel = () => {
       if (currentUser.value.loggedIn) {
         authorization.execute({
           authVia: "token",
+          team: currentUser.value.teamID,
           userId: currentUser.value.id,
           token: currentUser.value.accessToken,
         });

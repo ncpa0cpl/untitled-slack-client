@@ -29,6 +29,6 @@ type UserState =
   | User
   | { loggedIn: false; firsLoadCompleted: boolean; id?: undefined };
 
-export const SlackUser = quark({ loggedIn: false } as UserState);
+export const UserQuark = quark({ loggedIn: false } as UserState);
 
-QuarkFileSyncService.registerQuark("current_user", SlackUser);
+QuarkFileSyncService.registerQuark("current_user", UserQuark);

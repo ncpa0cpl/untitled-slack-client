@@ -5,6 +5,7 @@ import Gio from "gi://Gio";
 import path from "path";
 import { quark } from "react-quarks";
 import { QuarkFileSyncService } from "../services/quark-file-sync-service/quark-file-sync-service";
+import type { UserProfilePictureBytes } from "../services/slack-service/slack-types";
 
 export enum ImageType {
   ProfilePicture = "profile-picture",
@@ -52,10 +53,7 @@ export const ImageIndex = quark(
       async addProfilePictures(
         state,
         uid: string,
-        images: {
-          buffer: Uint8Array;
-          size: ProfilePicture["size"];
-        }[]
+        images: UserProfilePictureBytes[]
       ) {
         const newImages: Image[] = [];
 

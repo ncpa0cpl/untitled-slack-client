@@ -1,7 +1,8 @@
 import Gtk from "gi://Gtk";
-import React, { Fragment } from "react";
+import React from "react";
 import {
   Align,
+  Anchor,
   Box,
   Button,
   ButtonType,
@@ -19,13 +20,12 @@ import {
 import { ImageIndex } from "../../../../quarks/image-index";
 import { FontSettings } from "../../../../quarks/settings/font-size";
 import { UsersIndex } from "../../../../quarks/users-index";
+import { SlackService } from "../../../../services/slack-service/slack-service";
 import type {
   MessageBlock,
-  MessageBlockRichText,
   MessageFile,
   SlackMessage,
-} from "../../../../services/slack-service/slack-service";
-import { SlackService } from "../../../../services/slack-service/slack-service";
+} from "../../../../services/slack-service/slack-types";
 import { AppMarkup } from "../../../app-markup/app-markup";
 import { FontMod, FontSize } from "../../../font-size/font-size-context";
 import { Timestamp } from "../../../timestamp/timestamp";
@@ -33,7 +33,7 @@ import { UserProfilePicture } from "../../../user-profile-picture/user-profile-p
 import { Thread } from "./thread";
 
 type MessageBoxProps = {
-  contents?: MessageBlockRichText[];
+  contents?: MessageBlock[];
   userID?: string;
   username?: string;
   sentAt?: number;
@@ -46,8 +46,9 @@ const UserName = (props: { userID: string }) => {
   const userInfo = UsersIndex.useUser(props.userID);
 
   React.useEffect(() => {
-    if (!userInfo && props.userID) {
-      SlackService.users.getUser(props.userID);
+    const service = SlackService.getService();
+    if (!userInfo && props.userID && service) {
+      service.users.getUser(props.userID);
     }
   }, [userInfo, props.userID]);
 
@@ -64,6 +65,13 @@ const renderNode = (node: MessageBlock, key: string): JSX.Element => {
     case "text": {
       return <Span key={key}>{node.text}</Span>;
     }
+    case "link": {
+      return (
+        <Anchor key={key} href={node.url}>
+          {node.text ?? node.url}
+        </Anchor>
+      );
+    }
     case "emoji":
       return (
         <Span key={key} fontWeight="bold">
@@ -74,33 +82,42 @@ const renderNode = (node: MessageBlock, key: string): JSX.Element => {
       return <UserName key={key} userID={node.user_id} />;
     case "rich_text":
       return (
-        <Fragment key={key}>
+        <Span key={key}>
           {node.elements.map((elem, id) => renderNode(elem, `${key}-${id}`))}
-        </Fragment>
+        </Span>
       );
     case "rich_text_section":
       return (
-        <Fragment key={key}>
+        <Span key={key}>
           {node.elements.map((elem, id) => renderNode(elem, `${key}-${id}`))}
-        </Fragment>
+        </Span>
       );
   }
 
   console.log(node);
-  return <Fragment key={key}></Fragment>;
+  return <Span key={key}></Span>;
 };
 
 const AttachmentImage = (props: { file: MessageFile }) => {
   const file = ImageIndex.useAttachmentImage(props.file.id);
 
   React.useEffect(() => {
-    if (!file && props.file.id != null) {
-      SlackService.channels.getAttachmentFile(props.file);
+    const service = SlackService.getService();
+    if (!file && props.file.id != null && service) {
+      service.channels.requestAttachmentFile(props.file);
     }
   }, [file]);
 
   if (file) {
-    return <Image horizontalAlign={Align.START} src={file?.fileLocation} />;
+    return (
+      <Image
+        horizontalAlign={Align.START}
+        src={file?.fileLocation}
+        resizeToWidth={250}
+        resizeToHeight={250}
+        preserveAspectRatio
+      />
+    );
   }
 
   return <></>;
@@ -113,8 +130,9 @@ const MessageBoxImpl = (props: MessageBoxProps) => {
   const [showSubThread, setShowSubThread] = React.useState(false);
 
   React.useEffect(() => {
-    if (!userInfo && props.userID) {
-      SlackService.users.getUser(props.userID);
+    const service = SlackService.getService();
+    if (!userInfo && props.userID && service) {
+      service.users.getUser(props.userID);
     }
   }, [userInfo]);
 

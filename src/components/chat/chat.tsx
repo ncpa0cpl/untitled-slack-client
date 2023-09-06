@@ -1,23 +1,24 @@
 import React from "react";
 import { Align, Orientation, Paned } from "react-gjs-renderer";
-import { SlackClient } from "../../quarks/slack/slack-client";
-import { SlackUser } from "../../quarks/user";
+import { SlackQuark } from "../../quarks/slack/slack-client";
+import { UserQuark } from "../../quarks/user";
 import { SlackService } from "../../services/slack-service/slack-service";
 import { ConversationList } from "./sub-components/conversation-list/conversation-list";
 import { ConversationBox } from "./sub-components/conversation/conversation";
 
 export const Chat = () => {
-  const currentUser = SlackUser.use();
-  const slackClient = SlackClient.use();
+  const currentUser = UserQuark.use();
+  const slackClient = SlackQuark.use();
 
   React.useEffect(() => {
-    if (!slackClient.value.client) return;
+    const service = SlackService.getService();
+    if (!service) return;
 
-    SlackService.channels
+    service.channels
       .getAllConversations()
-      .then(() => SlackService.channels.getConversationsInfo())
+      .then(() => service.channels.getConversationsInfo())
       .catch(console.error);
-  }, [slackClient.value.client]);
+  }, [slackClient.value.activeWorkspace]);
 
   if (!currentUser.value.loggedIn) {
     return null;

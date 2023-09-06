@@ -23,17 +23,15 @@ export const UserProfilePicture = (props: UserProfilePictureProps) => {
   );
 
   React.useEffect(() => {
-    (async () => {
-      if (
-        props.userID &&
-        !profilePicture &&
-        ImageIndex.get().firsLoadCompleted
-      ) {
-        SlackService.users
-          .getUserProfilePictures(props.userID)
-          .catch(console.error);
-      }
-    })();
+    const service = SlackService.getService();
+    if (
+      service &&
+      props.userID &&
+      !profilePicture &&
+      ImageIndex.get().firsLoadCompleted
+    ) {
+      service.users.getUserProfilePicture(props.userID);
+    }
   }, [props.userID]);
 
   if (!profilePicture && !props.fallbackImage) {

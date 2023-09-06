@@ -3,7 +3,7 @@ import { Align, Box } from "react-gjs-renderer";
 import type {
   MessageBlockRichText,
   SlackMessage,
-} from "../../../../services/slack-service/slack-service";
+} from "../../../../services/slack-service/slack-types";
 import { MessageEditor } from "../../../message-editor/message-editor";
 import { MessageBox } from "./message";
 

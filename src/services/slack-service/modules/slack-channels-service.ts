@@ -2,15 +2,19 @@ import type {
   Channel,
   ConversationsListResponse,
 } from "@slack/web-api/dist/response/ConversationsListResponse";
-import type { AxiosResponse } from "axios";
+import type { AxiosRequestConfig, AxiosResponse } from "axios";
 import { ImageIndex } from "../../../quarks/image-index";
 import type { ConversationChannel } from "../../../quarks/slack/conversations";
 import {
   ConversationType,
   Conversations,
 } from "../../../quarks/slack/conversations";
+import { RequestError } from "../../../utils/errors/fetch-error";
 import { generateUID } from "../../../utils/generate-uid";
-import type { MessageFile, SlackMessage, SlackService } from "../slack-service";
+import type { AsyncResult, Result } from "../../../utils/result";
+import { AsyncAll, err, ok } from "../../../utils/result";
+import type { SlackService } from "../slack-service";
+import type { MessageFile, SlackMessage } from "../slack-types";
 
 type UserCounts = {
   ok: boolean;
@@ -37,41 +41,56 @@ type UserCounts = {
   }>;
 };
 
-export class SlackChannelsService {
-  constructor(private readonly mainService: typeof SlackService) {}
+type FetchedMessages = {
+  messages: SlackMessage[];
+  hasMore: boolean;
+  cursor?: string;
+};
 
-  private async fetchChannelInfo(channelID: string) {
+export class SlackChannelsService {
+  constructor(private readonly mainService: SlackService) {}
+
+  private get client() {
+    return this.mainService.getClient();
+  }
+
+  private get axios() {
+    return this.mainService.getAxios();
+  }
+
+  private async requestChannelInfo(channelID: string) {
     const client = this.mainService.getClient();
 
-    return await client.conversations.info({
+    await client.conversations.info({
       channel: channelID,
     });
   }
 
-  private async fetchAllConversations() {
-    const client = this.mainService.getClient();
-
+  private async requestAllConversations(): AsyncResult<
+    ConversationChannel[],
+    RequestError | Error[]
+  > {
     const channels: Channel[] = [];
     let cursor: string | undefined = undefined;
 
     while (true) {
-      const resp: ConversationsListResponse = await client.conversations.list({
-        types: "public_channel,private_channel,im,mpim",
-        exclude_archived: true,
-        limit: 100,
-        cursor: cursor,
-      });
+      const resp: ConversationsListResponse =
+        await this.client.conversations.list({
+          types: "public_channel,private_channel,im,mpim",
+          exclude_archived: true,
+          limit: 100,
+          cursor: cursor,
+        });
 
       if (!resp) {
         break;
       }
 
       if (!resp.ok) {
-        throw new Error(resp.error);
+        return err(new RequestError(resp.error));
       }
 
       channels.push(...(resp.channels ?? []));
-
       if (resp.response_metadata?.next_cursor) {
         cursor = resp.response_metadata.next_cursor;
       } else {
@@ -79,90 +98,115 @@ export class SlackChannelsService {
       }
     }
 
-    const conversations: Promise<ConversationChannel>[] = [];
+    const conversations: AsyncResult<ConversationChannel>[] = [];
 
     for (const channel of channels) {
       if (!channel.id) {
         continue;
       }
 
-      if (!channel.name && channel.user) {
+      if (!channel.name && channel.user && channel.id) {
         conversations.push(
-          this.mainService.users.getUser(channel.user).then(async (user) => {
-            return {
+          new Promise<Result<ConversationChannel>>(async (resolve) => {
+            const userResult = await this.mainService.users.getUser(
+              channel.user!
+            );
+
+            if (!userResult.ok) {
+              return resolve(userResult);
+            }
+
+            const chan: ConversationChannel = {
               id: channel.id!,
-              name: user.name,
+              name: userResult.value.name,
               isMember: !!(channel.priority != null && channel.priority > 0),
               isOrgShared: !!channel.is_org_shared,
               memberCount: 2,
               type: ConversationType.Direct,
-              uid: user.id,
+              uid: userResult.value.id,
               unreadCount: 0,
             };
+
+            return resolve(ok(chan));
           })
         );
       } else if (channel.name) {
         if (channel.is_private) {
           conversations.push(
-            Promise.resolve({
-              id: channel.id,
-              name: channel.name_normalized ?? channel.name,
-              isMember: !!channel.is_member,
-              isOrgShared: !!channel.is_org_shared,
-              memberCount: channel.num_members ?? 0,
-              type: ConversationType.PrivateGroup,
-              unreadCount: 0,
-            })
+            Promise.resolve(
+              ok({
+                id: channel.id,
+                name: channel.name_normalized ?? channel.name,
+                isMember: !!channel.is_member,
+                isOrgShared: !!channel.is_org_shared,
+                memberCount: channel.num_members ?? 0,
+                type: ConversationType.PrivateGroup,
+                unreadCount: 0,
+              })
+            )
           );
         } else {
           conversations.push(
-            Promise.resolve({
-              id: channel.id,
-              name: channel.name_normalized ?? channel.name,
-              isMember: !!channel.is_member,
-              isOrgShared: !!channel.is_org_shared,
-              memberCount: channel.num_members ?? 0,
-              type: channel.is_channel
-                ? ConversationType.Group
-                : ConversationType.DirectGroup,
-              unreadCount: 0,
-            })
+            Promise.resolve(
+              ok({
+                id: channel.id,
+                name: channel.name_normalized ?? channel.name,
+                isMember: !!channel.is_member,
+                isOrgShared: !!channel.is_org_shared,
+                memberCount: channel.num_members ?? 0,
+                type: channel.is_channel
+                  ? ConversationType.Group
+                  : ConversationType.DirectGroup,
+                unreadCount: 0,
+              })
+            )
           );
         }
       }
     }
 
-    return await Promise.all(conversations).then((convs) =>
-      convs.sort((a, b) => a.name.localeCompare(b.name))
-    );
+    Promise.all([Promise.resolve(""), Promise.resolve(1)]);
+
+    const conversationsResult = await AsyncAll(conversations);
+
+    if (!conversationsResult.ok) {
+      return conversationsResult;
+    }
+
+    conversationsResult.value.sort((a, b) => a.name.localeCompare(b.name));
+
+    return ok(conversationsResult.value);
   }
 
-  async getAttachmentFile(file: MessageFile) {
-    const client = this.mainService.getClient();
-
+  async requestAttachmentFile(file: MessageFile): AsyncResult {
     const url = file.url_private_download;
 
     if (!url || !file.id) {
-      return;
+      return err(new Error("No file URL or ID"));
     }
 
     try {
-      const config = {
+      const config: AxiosRequestConfig = {
         responseType: "arraybuffer",
         data: {},
       };
 
-      const response: AxiosResponse = await client.axios.get(url, config);
+      const response: AxiosResponse = await this.axios.get(url, config);
 
       if (response.status === 200) {
         ImageIndex.addAttachmentImage(file.id, new Uint8Array(response.data));
       }
+
+      return ok();
     } catch (error) {
-      console.error(error);
+      return err(error instanceof Error ? error : new Error(String(error)));
     }
   }
 
-  async fetchMessages(channelID: string, cursor?: string) {
+  async fetchMessages(
+    channelID: string,
+    cursor?: string
+  ): AsyncResult<FetchedMessages> {
     const client = this.mainService.getClient();
 
     const response = await client.conversations.history({
@@ -172,7 +216,7 @@ export class SlackChannelsService {
     });
 
     if (!response.ok || response.error) {
-      throw new Error(response.error);
+      return err(new Error(response.error));
     }
 
     const result: SlackMessage[] = [];
@@ -200,23 +244,26 @@ export class SlackChannelsService {
       });
     }
 
-    return {
+    return ok({
       messages: result.reverse(),
       hasMore: !!response.has_more,
       cursor: response.response_metadata?.next_cursor,
-    };
+    });
   }
 
-  async getAllConversations() {
-    try {
-      const conversations = await this.fetchAllConversations();
-      Conversations.setConversations(conversations);
-    } catch (error) {
-      console.error(error);
+  async getAllConversations(): AsyncResult<void, Error | Error[]> {
+    const conversations = await this.requestAllConversations();
+
+    if (!conversations.ok) {
+      return conversations;
     }
+
+    Conversations.setConversations(conversations.value);
+
+    return ok();
   }
 
-  async getConversationsInfo() {
+  async getConversationsInfo(): AsyncResult {
     const client = this.mainService.getClient();
     const conversations = Conversations.get().conversations;
 
@@ -228,6 +275,10 @@ export class SlackChannelsService {
     const updates: ConvUpdate[] = [];
 
     const counts: UserCounts = (await client.apiCall("users.counts")) as any;
+
+    if (!counts.ok) {
+      return err(new Error("Failed to get user counts"));
+    }
 
     for (const channel of counts.channels) {
       if (!channel.is_member) {
@@ -247,5 +298,25 @@ export class SlackChannelsService {
     }
 
     Conversations.updateConversation(updates);
+
+    return ok();
+  }
+
+  async sendMessage(
+    channelID: string,
+    message: string
+  ): AsyncResult<void, RequestError> {
+    const response = await this.client.chat.postMessage({
+      channel: channelID,
+      mrkdwn: true,
+      text: message,
+      as_user: true,
+    });
+
+    if (!response.ok) {
+      return err(new RequestError(response.error));
+    }
+
+    return ok();
   }
 }
