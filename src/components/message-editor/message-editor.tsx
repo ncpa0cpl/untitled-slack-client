@@ -6,6 +6,7 @@ import {
   Button,
   ButtonGroup,
   IconName,
+  InputPurpose,
   KeyPressModifiers,
   Orientation,
   TextArea,
@@ -13,6 +14,8 @@ import {
   ToolbarButton,
 } from "react-gjs-renderer";
 import type { TextAreaEvent } from "react-gjs-renderer/dist/gjs-elements/gtk3/text-area/text-area";
+import { FontSettings } from "../../quarks/settings/font-size";
+import { $quark } from "../../utils/class-quark-hook";
 import { Bound } from "../../utils/decorators/bound";
 import { stylesheet } from "../../utils/stylesheet";
 
@@ -43,6 +46,7 @@ export class MessageEditor extends BetterComponent<MessageEditorProps> {
   private forwardHistory: string[] = [];
   private text = this.$state("");
   private selection = this.$state<[number, number]>([0, 0]);
+  private font = $quark(this, FontSettings);
 
   constructor(props: MessageEditorProps) {
     super(props);
@@ -190,6 +194,7 @@ export class MessageEditor extends BetterComponent<MessageEditorProps> {
           />
         </Toolbar>
         <TextArea
+          type={InputPurpose.FREE_FORM}
           onKeyPress={this.handleKeyPress}
           value={this.text.get()}
           onChange={this.handleTextChange}
@@ -201,6 +206,7 @@ export class MessageEditor extends BetterComponent<MessageEditorProps> {
           style={{
             borderBottomLeftRadius: 10,
             borderBottomRightRadius: 10,
+            fontSize: this.font.get().msgSize,
           }}
         ></TextArea>
         <Box

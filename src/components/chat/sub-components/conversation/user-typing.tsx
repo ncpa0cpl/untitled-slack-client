@@ -15,6 +15,8 @@ export const UserTyping = (props: { userID: string }) => {
 
   if (!userInfo) return <Label></Label>;
   return (
-    <Label horizontalAlign={Align.START}>{userInfo.name} is typing.</Label>
+    <Label horizontalAlign={Align.START} margin={[0, 5, 0]}>
+      {userInfo.name} is typing.
+    </Label>
   );
 };

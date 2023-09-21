@@ -104,37 +104,37 @@ export class WindowBar extends BetterComponent {
                     <PopoverMenuRadioButton
                       radioGroup="msg-font-size"
                       label="10px"
-                      isDefault={this.msgSize === 10}
+                      selected={this.msgSize === 10}
                       onChange={this.handleMsgFontSizeChange}
                     />
                     <PopoverMenuRadioButton
                       radioGroup="msg-font-size"
                       label="12px"
-                      isDefault={this.msgSize === 12}
+                      selected={this.msgSize === 12}
                       onChange={this.handleMsgFontSizeChange}
                     />
                     <PopoverMenuRadioButton
                       radioGroup="msg-font-size"
                       label="14px"
-                      isDefault={this.msgSize === 14}
+                      selected={this.msgSize === 14}
                       onChange={this.handleMsgFontSizeChange}
                     />
                     <PopoverMenuRadioButton
                       radioGroup="msg-font-size"
                       label="16px"
-                      isDefault={this.msgSize === 16}
+                      selected={this.msgSize === 16}
                       onChange={this.handleMsgFontSizeChange}
                     />
                     <PopoverMenuRadioButton
                       radioGroup="msg-font-size"
                       label="18px"
-                      isDefault={this.msgSize === 18}
+                      selected={this.msgSize === 18}
                       onChange={this.handleMsgFontSizeChange}
                     />
                     <PopoverMenuRadioButton
                       radioGroup="msg-font-size"
                       label="20px"
-                      isDefault={this.msgSize === 20}
+                      selected={this.msgSize === 20}
                       onChange={this.handleMsgFontSizeChange}
                     />
                   </PopoverMenuEntry>
@@ -145,37 +145,37 @@ export class WindowBar extends BetterComponent {
                     <PopoverMenuRadioButton
                       radioGroup="ui-font-size"
                       label="10px"
-                      isDefault={this.uiSize === 10}
+                      selected={this.uiSize === 10}
                       onChange={this.handleUiFontSizeChange}
                     />
                     <PopoverMenuRadioButton
                       radioGroup="ui-font-size"
                       label="12px"
-                      isDefault={this.uiSize === 12}
+                      selected={this.uiSize === 12}
                       onChange={this.handleUiFontSizeChange}
                     />
                     <PopoverMenuRadioButton
                       radioGroup="ui-font-size"
                       label="14px"
-                      isDefault={this.uiSize === 14}
+                      selected={this.uiSize === 14}
                       onChange={this.handleUiFontSizeChange}
                     />
                     <PopoverMenuRadioButton
                       radioGroup="ui-font-size"
                       label="16px"
-                      isDefault={this.uiSize === 16}
+                      selected={this.uiSize === 16}
                       onChange={this.handleUiFontSizeChange}
                     />
                     <PopoverMenuRadioButton
                       radioGroup="ui-font-size"
                       label="18px"
-                      isDefault={this.uiSize === 18}
+                      selected={this.uiSize === 18}
                       onChange={this.handleUiFontSizeChange}
                     />
                     <PopoverMenuRadioButton
                       radioGroup="ui-font-size"
                       label="20px"
-                      isDefault={this.uiSize === 20}
+                      selected={this.uiSize === 20}
                       onChange={this.handleUiFontSizeChange}
                     />
                   </PopoverMenuEntry>

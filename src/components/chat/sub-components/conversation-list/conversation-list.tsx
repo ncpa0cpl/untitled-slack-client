@@ -37,7 +37,7 @@ export const ConversationList = () => {
     <Box
       cpt:shrink={false}
       expand
-      widthRequest={275}
+      widthRequest={325}
       verticalAlign={Align.FILL}
       horizontalAlign={Align.FILL}
     >

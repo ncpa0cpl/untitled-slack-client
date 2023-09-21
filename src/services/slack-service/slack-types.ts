@@ -125,7 +125,7 @@ export type MessageFile = FileElement;
 export type SlackMessage =
   | {
       id: string;
-      contents: MessageBlock[];
+      contents?: MessageBlock[];
       userID: string;
       username?: undefined;
       timestamp?: number;
@@ -133,7 +133,7 @@ export type SlackMessage =
     }
   | {
       id: string;
-      contents: MessageBlock[];
+      contents?: MessageBlock[];
       userID?: undefined;
       username: string;
       timestamp?: number;

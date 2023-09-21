@@ -1,5 +1,6 @@
+import Gio from "gi://Gio";
 import React from "react";
-import { BetterComponent } from "react-better-components";
+import { BetterComponent, MapContext } from "react-better-components";
 import {
   Align,
   Box,
@@ -8,13 +9,18 @@ import {
   PositionType,
   ScrollBox,
   Spinner,
+  WindowContext,
 } from "react-gjs-renderer";
 import type { ScrollBoxEvent } from "react-gjs-renderer/dist/gjs-elements/gtk3/scroll-box/scroll-box";
+import type { WindowElement } from "react-gjs-renderer/dist/gjs-elements/rg-types";
 import { ActiveConversation } from "../../../../quarks/slack/conversations";
 import { SlackQuark } from "../../../../quarks/slack/slack-client";
+import { UsersIndex } from "../../../../quarks/users-index";
 import { SlackService } from "../../../../services/slack-service/slack-service";
 import type {
+  MessageBlock,
   MessageBlockRichText,
+  MessageFile,
   SlackMessage,
 } from "../../../../services/slack-service/slack-types";
 import { $quark } from "../../../../utils/class-quark-hook";
@@ -73,6 +79,19 @@ type PostMessageResponse = {
   };
 };
 
+export type SlackMessageGroup = {
+  id: string;
+  groups: Array<{
+    id: string;
+    contents?: MessageBlock[];
+    files: MessageFile[];
+    timestamp?: number;
+  }>;
+} & (
+  | { userID: string; username?: undefined }
+  | { userID?: undefined; username: string }
+);
+
 function sortMsgs(a: SlackMessage, b: SlackMessage) {
   return (a.timestamp ?? 0) - (b.timestamp ?? 0);
 }
@@ -81,7 +100,11 @@ function selectCurrentWs(state: ReturnType<typeof SlackQuark.get>) {
   return state.workspaces.find((w) => w.team === state.activeWorkspace)?.socket;
 }
 
+// @ts-expect-error
+@MapContext({ mainWindow: WindowContext })
 export class ConversationBox extends BetterComponent {
+  private declare mainWindow: WindowElement;
+
   private scrollBoxRef = React.createRef<Rg.Element.ScrollBoxElement | null>();
   private isFirstUserScroll = true;
   private lastPosFromBottom = 0;
@@ -92,7 +115,7 @@ export class ConversationBox extends BetterComponent {
 
   private isLoading = this.$state(false);
   private loadError = this.$state<Error | null>(null);
-  private messages = this.$state<SlackMessage[]>([]);
+  private messages = this.$state<SlackMessageGroup[]>([]);
   private cursor = this.$state<string | undefined>(undefined);
   private usersTyping = this.$state<{ uid: string; ts: number }[]>([]);
 
@@ -114,6 +137,51 @@ export class ConversationBox extends BetterComponent {
         timeouts.forEach((t) => clearTimeout(t));
       };
     }, [this.usersTyping]);
+  }
+
+  private addNewMessage(msg: SlackMessage) {
+    this.messages.set((current) => {
+      const last = current.at(-1);
+
+      if (last && last.userID === msg.userID) {
+        return current.slice(0, -1).concat({
+          ...last,
+          groups: last.groups.concat(msg),
+        });
+      }
+
+      return current.concat({
+        userID: msg.userID,
+        username: msg.username,
+        id: msg.id,
+        groups: [msg],
+      } as SlackMessageGroup);
+    });
+  }
+
+  private mapMessages(msgs: SlackMessage[]) {
+    msgs.sort(sortMsgs);
+
+    const groups: SlackMessageGroup[] = [];
+
+    for (let i = 0; i < msgs.length; i++) {
+      const message = msgs[i]!;
+      const lastMsg = groups.at(-1);
+
+      if (lastMsg?.userID === message?.userID) {
+        lastMsg!.groups.push(message);
+      } else {
+        const g: SlackMessageGroup = {
+          id: message.id,
+          userID: message.userID,
+          username: message.username,
+          groups: [message],
+        } as SlackMessageGroup;
+        groups.push(g);
+      }
+    }
+
+    return groups;
   }
 
   private connectWs() {
@@ -146,12 +214,37 @@ export class ConversationBox extends BetterComponent {
             files: [],
           };
 
-          const ut = this.usersTyping.get();
-          if (!ut.some((u) => u.uid === data.user)) {
-            this.usersTyping.set(ut.filter((u) => u.uid !== data.user));
-          }
-          this.messages.set(this.messages.get().concat(msg));
+          this.usersTyping.set((current) =>
+            current.filter((u) => u.uid !== data.user)
+          );
+          this.addNewMessage(msg);
         }
+
+        setTimeout(() => {
+          if (this.mainWindow.getWidget().is_active) return;
+
+          const user = UsersIndex.get().users.find((u) => u.id === data.user);
+          const notification = new Gio.Notification();
+          // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
+          notification.set_title(
+            "New message" + (user ? " from " + user.name : "")
+          );
+          notification.set_category("im.received");
+          notification.set_priority(Gio.NotificationPriority.LOW);
+
+          const notificationID = `slack-msg-${data.client_msg_id}`;
+          Gio.Application.get_default()?.send_notification(
+            notificationID,
+            notification
+          );
+
+          setTimeout(() => {
+            Gio.Application.get_default()?.withdraw_notification(
+              notificationID
+            );
+          }, 10 * 1000);
+        });
+
         break;
       }
       case "user_typing": {
@@ -236,15 +329,13 @@ export class ConversationBox extends BetterComponent {
         return;
       }
 
-      let newMessages = result.value.messages;
+      let newMessages = this.mapMessages(result.value.messages);
 
       if (!reset) {
         newMessages = newMessages.concat(this.messages.get());
       } else {
         newMessages = newMessages.slice();
       }
-
-      newMessages.sort(sortMsgs);
 
       this.messages.set(newMessages);
       this.cursor.set(result.value.cursor);
@@ -311,19 +402,12 @@ export class ConversationBox extends BetterComponent {
               ) : (
                 this.messages
                   .get()
-                  .map((message, i) => (
+                  .map((message) => (
                     <MessageBox
                       key={message.id}
-                      contents={message.contents}
                       userID={message.userID}
                       username={message.username}
-                      sentAt={message.timestamp}
-                      files={message.files}
-                      subthread={
-                        i === this.messages.get().length - 1
-                          ? [{} as any]
-                          : undefined
-                      }
+                      groups={message.groups}
                     />
                   ))
               )}
@@ -338,8 +422,9 @@ export class ConversationBox extends BetterComponent {
         >
           <MessageEditor onSend={this.handleSend} />
           <Box
-            heightRequest={16}
+            heightRequest={18}
             horizontalAlign={Align.START}
+            orientation={Orientation.HORIZONTAL}
             margin={[5, 0, 0, 0]}
           >
             <FontSize size={FontMod.shrink.by30}>

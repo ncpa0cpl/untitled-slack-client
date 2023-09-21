@@ -30,16 +30,15 @@ import { AppMarkup } from "../../../app-markup/app-markup";
 import { FontMod, FontSize } from "../../../font-size/font-size-context";
 import { Timestamp } from "../../../timestamp/timestamp";
 import { UserProfilePicture } from "../../../user-profile-picture/user-profile-picture";
+import type { SlackMessageGroup } from "./conversation";
 import { Thread } from "./thread";
 
 type MessageBoxProps = {
-  contents?: MessageBlock[];
   userID?: string;
   username?: string;
-  sentAt?: number;
   subThreadMessage?: boolean;
   subthread?: SlackMessage[];
-  files: MessageFile[];
+  groups: SlackMessageGroup["groups"];
 };
 
 const UserName = (props: { userID: string }) => {
@@ -136,6 +135,18 @@ const MessageBoxImpl = (props: MessageBoxProps) => {
     }
   }, [userInfo]);
 
+  const mainTs = props.groups[0]?.timestamp;
+
+  const shouldNotDisplay = React.useMemo(() => {
+    return !props.groups.some(
+      (g) => (g.contents && g.contents.length) || g.files.length
+    );
+  }, [props.groups]);
+
+  if (shouldNotDisplay) {
+    return <></>;
+  }
+
   return (
     <Box
       style={{
@@ -183,7 +194,7 @@ const MessageBoxImpl = (props: MessageBoxProps) => {
                 </Span>
               </AppMarkup>
             </FontSize>
-            {props.sentAt ? <Timestamp timestamp={props.sentAt} /> : <></>}
+            {mainTs ? <Timestamp timestamp={mainTs} /> : <></>}
             <PackEnd>
               <Box
                 cpt:pack-type={PackType.END}
@@ -212,32 +223,44 @@ const MessageBoxImpl = (props: MessageBoxProps) => {
               </Box>
             </PackEnd>
           </Box>
-          {props.contents && (
-            <Markup
-              margin={10}
-              selectable
-              horizontalAlign={Align.START}
-              justify={Justification.LEFT}
-              style={{
-                caretColor: "rgba(0, 0, 0, 0)",
-              }}
-            >
-              <Span fontSize={font.value.msgSize}>
-                {props.contents.map((node, i) =>
-                  renderNode(node, i.toString())
+          {props.groups.map((g) => {
+            return (
+              <Box
+                key={g.id}
+                margin={[0, 10]}
+                expandHorizontal
+                horizontalAlign={Align.FILL}
+                orientation={Orientation.VERTICAL}
+              >
+                {g.contents && (
+                  <Markup
+                    margin={[6, 0]}
+                    selectable
+                    horizontalAlign={Align.START}
+                    justify={Justification.LEFT}
+                    style={{
+                      caretColor: "rgba(0, 0, 0, 0)",
+                    }}
+                  >
+                    <Span fontSize={font.value.msgSize}>
+                      {g.contents.map((node, i) =>
+                        renderNode(node, i.toString())
+                      )}
+                    </Span>
+                  </Markup>
                 )}
-              </Span>
-            </Markup>
-          )}
-          <Box horizontalAlign={Align.START} expandHorizontal>
-            {props.files.map((f, idx) =>
-              f.mimetype?.startsWith("image/") ? (
-                <AttachmentImage key={f.id ?? idx} file={f} />
-              ) : (
-                <></>
-              )
-            )}
-          </Box>
+                <Box horizontalAlign={Align.START} expandHorizontal>
+                  {g.files.map((f, idx) =>
+                    f.mimetype?.startsWith("image/") ? (
+                      <AttachmentImage key={f.id ?? idx} file={f} />
+                    ) : (
+                      <></>
+                    )
+                  )}
+                </Box>
+              </Box>
+            );
+          })}
           {props.subthread?.length ? (
             <LinkButton
               horizontalAlign={Align.START}
@@ -259,7 +282,7 @@ const MessageBoxImpl = (props: MessageBoxProps) => {
           transitionType={Gtk.RevealerTransitionType.SLIDE_DOWN}
           visible={showSubThread}
         >
-          <Thread />
+          <Thread messages={props.subthread} />
         </Revealer>
       ) : (
         <></>
