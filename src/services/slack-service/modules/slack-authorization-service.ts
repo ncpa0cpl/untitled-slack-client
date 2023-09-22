@@ -3,6 +3,7 @@ import type { User as SlackUser } from "@slack/web-api/dist/response/UsersInfoRe
 import { SlackQuark } from "../../../quarks/slack/slack-client";
 import { UserQuark, type User } from "../../../quarks/user";
 import { RequestError } from "../../../utils/errors/fetch-error";
+import { Logger } from "../../../utils/logger";
 import type { AsyncResult } from "../../../utils/result";
 import { err, ok, type Result } from "../../../utils/result";
 
@@ -32,7 +33,7 @@ export class AuthorizationError extends Error {
   }
 }
 
-export class SlackAuthorizationService {
+export class SlackServiceAuthorizationModule {
   private createClient(token?: string): WebClient {
     const client = new WebClient(token, {
       maxRequestConcurrency: 10,
@@ -48,7 +49,7 @@ export class SlackAuthorizationService {
   }
 
   private async createWebSocket(
-    client: WebClient
+    client: WebClient,
   ): AsyncResult<WebSocket, Error> {
     const rtm = await client.rtm.connect();
 
@@ -67,7 +68,7 @@ export class SlackAuthorizationService {
   async logIn(
     teamDomain: string,
     email: string,
-    password: string
+    password: string,
   ): Promise<Result<User, AuthorizationError | Error>> {
     const client = this.createClient();
 
@@ -92,7 +93,7 @@ export class SlackAuthorizationService {
     const authResult = await this.authorizeUser(
       findTeamResponse.team_id as string,
       signInResponse.token as string,
-      signInResponse.user as string
+      signInResponse.user as string,
     );
 
     if (!authResult.ok) {
@@ -133,7 +134,7 @@ export class SlackAuthorizationService {
   async authorizeUser(
     team: string,
     token: string,
-    userID: string
+    userID: string,
   ): Promise<Result<SlackUser, AuthorizationError | Error>> {
     const client = this.createClient(token);
     const wsResult = await this.createWebSocket(client);
@@ -142,13 +143,21 @@ export class SlackAuthorizationService {
       return wsResult;
     }
 
-    SlackQuark.activateWorkspace(team, client, wsResult.value);
+    Logger.info("User has been authorized.");
+
+    try {
+      SlackQuark.activateWorkspace(team, client, wsResult.value);
+    } catch (e) {
+      Logger.error(e);
+      return err(new AuthorizationError(AuthResultCode.UserInfoFetchFailed));
+    }
 
     const userInfo = await client.users.info({
       user: userID,
     });
 
     if (!userInfo.ok || !userInfo.user) {
+      Logger.error(userInfo.error);
       return err(new AuthorizationError(AuthResultCode.UserInfoFetchFailed));
     }
 

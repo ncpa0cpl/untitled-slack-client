@@ -1,12 +1,12 @@
 import type { WebClient } from "@slack/web-api";
 import type { AxiosInstance } from "axios";
 import { SlackQuark } from "../../quarks/slack/slack-client";
-import { SlackAuthorizationService } from "./modules/slack-authorization-service";
-import { SlackChannelsService } from "./modules/slack-channels-service";
-import { SlackUsersService } from "./modules/slack-users-service";
+import { SlackServiceAuthorizationModule } from "./modules/slack-authorization-service";
+import { SlackServiceChannelsModule } from "./modules/slack-channels-service";
+import { SlackServiceUsersModule } from "./modules/slack-users-service";
 
 export class SlackService {
-  static auth = new SlackAuthorizationService();
+  static auth = new SlackServiceAuthorizationModule();
 
   static getService(team?: string): SlackService | undefined {
     const state = SlackQuark.get();
@@ -21,9 +21,9 @@ export class SlackService {
 
   constructor(private readonly client: WebClient) {}
 
-  users = new SlackUsersService(this);
+  users = new SlackServiceUsersModule(this);
 
-  channels = new SlackChannelsService(this);
+  channels = new SlackServiceChannelsModule(this);
 
   getClient() {
     return this.client;

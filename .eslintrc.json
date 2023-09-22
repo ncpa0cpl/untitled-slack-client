@@ -63,6 +63,14 @@
     "no-constant-condition": 0,
     "no-prototype-builtins": 0,
     "no-control-regex": 0,
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        "varsIgnorePattern": "^(_|__|___)",
+        "argsIgnorePattern": "^(_|__|___)",
+        "ignoreRestSiblings": true
+      }
+    ],
     "@typescript-eslint/ban-types": [
       "error",
       {

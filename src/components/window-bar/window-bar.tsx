@@ -13,8 +13,8 @@ import {
 } from "react-gjs-renderer";
 import type { SyntheticEvent } from "react-gjs-renderer/dist/gjs-elements/rg-types";
 import { FontSettings } from "../../quarks/settings/font-size";
-import { $quark } from "../../utils/class-quark-hook";
 import { Bound } from "../../utils/decorators/bound";
+import { $quark } from "../../utils/quarks";
 
 export class WindowBar extends BetterComponent {
   private fontSettings = $quark(this, FontSettings);
@@ -32,7 +32,7 @@ export class WindowBar extends BetterComponent {
     e: SyntheticEvent<
       { isActive: boolean },
       Rg.Element.PopoverMenuRadioButtonElement
-    >
+    >,
   ) {
     if (e.isActive) {
       switch (e.targetWidget.text) {
@@ -63,7 +63,7 @@ export class WindowBar extends BetterComponent {
     e: SyntheticEvent<
       { isActive: boolean },
       Rg.Element.PopoverMenuRadioButtonElement
-    >
+    >,
   ) {
     if (e.isActive) {
       switch (e.targetWidget.text) {
@@ -91,7 +91,10 @@ export class WindowBar extends BetterComponent {
 
   render() {
     return (
-      <HeaderBar showControlButtons title={envs.friendlyAppName}>
+      <HeaderBar
+        showControlButtons
+        title={envs.friendlyAppName}
+      >
         <PackEnd>
           <Box>
             <PopoverMenu

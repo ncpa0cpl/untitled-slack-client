@@ -15,8 +15,8 @@ import {
 } from "react-gjs-renderer";
 import type { TextAreaEvent } from "react-gjs-renderer/dist/gjs-elements/gtk3/text-area/text-area";
 import { FontSettings } from "../../quarks/settings/font-size";
-import { $quark } from "../../utils/class-quark-hook";
 import { Bound } from "../../utils/decorators/bound";
+import { $quark } from "../../utils/quarks";
 import { stylesheet } from "../../utils/stylesheet";
 
 type MessageEditorProps = {
@@ -115,7 +115,7 @@ export class MessageEditor extends BetterComponent<MessageEditorProps> {
     e: TextAreaEvent<{
       text: string;
       cursorPosition: number;
-    }>
+    }>,
   ) {
     this.text.set(e.text);
   }
@@ -126,7 +126,7 @@ export class MessageEditor extends BetterComponent<MessageEditorProps> {
       selectedText: string;
       selectionStartIndex: number;
       selectionEndIndex: number;
-    }>
+    }>,
   ) {
     this.selection.set([e.selectionStartIndex, e.selectionEndIndex]);
   }
@@ -170,7 +170,10 @@ export class MessageEditor extends BetterComponent<MessageEditorProps> {
 
   render() {
     return (
-      <Box expandHorizontal horizontalAlign={Align.FILL}>
+      <Box
+        expandHorizontal
+        horizontalAlign={Align.FILL}
+      >
         <Toolbar
           expandHorizontal
           horizontalAlign={Align.FILL}

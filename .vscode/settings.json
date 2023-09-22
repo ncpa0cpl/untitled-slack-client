@@ -6,16 +6,13 @@
   },
   "json.schemas": [
     {
-      "fileMatch": [
-        "git-hook-tasks.config.json"
-      ],
+      "fileMatch": ["git-hook-tasks.config.json"],
       "url": "./node_modules/git-hook-tasks/dist/config/json-schema.json"
     },
     {
-      "fileMatch": [
-        "react-gnome.config.json"
-      ],
+      "fileMatch": ["react-gnome.config.json"],
       "url": "./node_modules/react-gnome/dist/config-schema.json"
     }
-  ]
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib"
 }

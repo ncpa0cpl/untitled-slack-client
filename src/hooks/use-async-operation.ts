@@ -2,7 +2,7 @@ import React from "react";
 import { useRefState } from "./use-ref-state";
 
 export const useAsyncOperation = <A extends any[], R>(
-  action: (...args: A) => Promise<R>
+  action: (...args: A) => Promise<R>,
 ) => {
   const [loading, setLoading] = useRefState(false);
   const [error, setError] = React.useState<unknown>(null);
@@ -26,8 +26,10 @@ export const useAsyncOperation = <A extends any[], R>(
       } finally {
         setLoading(false);
       }
+
+      return result;
     },
-    [action]
+    [action],
   );
 
   return { loading, error, result, execute };

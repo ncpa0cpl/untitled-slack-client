@@ -11,7 +11,7 @@ import type {
   UserProfilePictureLink,
 } from "../slack-types";
 
-export class SlackUsersService {
+export class SlackServiceUsersModule {
   constructor(private readonly mainService: SlackService) {}
 
   private get client() {
@@ -19,7 +19,7 @@ export class SlackUsersService {
   }
 
   private async requestUserInfo(
-    userID: string
+    userID: string,
   ): AsyncResult<UserInfo, RequestError> {
     const response = await this.client.users.info({
       user: userID,
@@ -52,7 +52,7 @@ export class SlackUsersService {
   }
 
   private async requestUserProfilePicture(
-    user: UserInfo
+    user: UserInfo,
   ): AsyncResult<UserProfilePictureBytes[], Error[]> {
     const pfps: UserProfilePictureLink[] = [];
 
@@ -115,8 +115,8 @@ export class SlackUsersService {
   }
 
   /**
-   * Gets the user of the specified ID from the index, or if not
-   * present fetches it and saves to the index.
+   * Gets the user of the specified ID from the index, or if not present fetches
+   * it and saves to the index.
    */
   async getUser(userID: string): AsyncResult<UserInfo, RequestError> {
     const knownUsers = UsersIndex.get();
@@ -137,14 +137,15 @@ export class SlackUsersService {
   }
 
   /**
-   * Gets the user profile picture of the specified ID from the
-   * index, or if not present fetches it and saves to the index.
+   * Gets the user profile picture of the specified ID from the index, or if not
+   * present fetches it and saves to the index.
    */
   async getUserProfilePicture(
-    userID: string
+    userID: string,
   ): AsyncResult<Image[], RequestError | Error[]> {
     const pfps = ImageIndex.get().images.filter(
-      (image) => image.type === ImageType.ProfilePicture && image.uid === userID
+      (image) =>
+        image.type === ImageType.ProfilePicture && image.uid === userID,
     );
 
     if (pfps.length === 0) {
@@ -165,8 +166,8 @@ export class SlackUsersService {
       return ok(
         ImageIndex.get().images.filter(
           (image) =>
-            image.type === ImageType.ProfilePicture && image.uid === userID
-        )
+            image.type === ImageType.ProfilePicture && image.uid === userID,
+        ),
       );
     }
 

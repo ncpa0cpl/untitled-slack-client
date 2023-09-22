@@ -47,7 +47,7 @@ type FetchedMessages = {
   cursor?: string;
 };
 
-export class SlackChannelsService {
+export class SlackServiceChannelsModule {
   constructor(private readonly mainService: SlackService) {}
 
   private get client() {
@@ -109,7 +109,7 @@ export class SlackChannelsService {
         conversations.push(
           new Promise<Result<ConversationChannel>>(async (resolve) => {
             const userResult = await this.mainService.users.getUser(
-              channel.user!
+              channel.user!,
             );
 
             if (!userResult.ok) {
@@ -128,7 +128,7 @@ export class SlackChannelsService {
             };
 
             return resolve(ok(chan));
-          })
+          }),
         );
       } else if (channel.name) {
         if (channel.is_private) {
@@ -142,8 +142,8 @@ export class SlackChannelsService {
                 memberCount: channel.num_members ?? 0,
                 type: ConversationType.PrivateGroup,
                 unreadCount: 0,
-              })
-            )
+              }),
+            ),
           );
         } else {
           conversations.push(
@@ -158,8 +158,8 @@ export class SlackChannelsService {
                   ? ConversationType.Group
                   : ConversationType.DirectGroup,
                 unreadCount: 0,
-              })
-            )
+              }),
+            ),
           );
         }
       }
@@ -205,7 +205,7 @@ export class SlackChannelsService {
 
   async fetchMessages(
     channelID: string,
-    cursor?: string
+    cursor?: string,
   ): AsyncResult<FetchedMessages> {
     const client = this.mainService.getClient();
 
@@ -304,7 +304,7 @@ export class SlackChannelsService {
 
   async sendMessage(
     channelID: string,
-    message: string
+    message: string,
   ): AsyncResult<void, RequestError> {
     const response = await this.client.chat.postMessage({
       channel: channelID,

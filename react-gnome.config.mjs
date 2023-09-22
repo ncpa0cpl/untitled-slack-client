@@ -1,7 +1,9 @@
 import resolve from "esbuild-plugin-resolve";
 
 export default () => {
-  /** @type {import("react-gnome").BuildConfig} */
+  /**
+   * @type {import("react-gnome").BuildConfig}
+   */
   const config = {
     applicationName: "slack-client",
     friendlyName: "Slack Client",
@@ -45,6 +47,9 @@ export default () => {
       {
         filepath: "./polyfills/util.js",
         importName: "util",
+      },
+      {
+        filepath: "./polyfills/queue-microtask.js",
       },
     ],
     esbuildPlugins: [

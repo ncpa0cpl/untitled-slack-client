@@ -52,7 +52,10 @@ const UserName = (props: { userID: string }) => {
   }, [userInfo, props.userID]);
 
   return (
-    <Span fontWeight={"bold"} color="blue">
+    <Span
+      fontWeight={"bold"}
+      color="blue"
+    >
       {userInfo?.name ?? ""}
     </Span>
   );
@@ -66,19 +69,30 @@ const renderNode = (node: MessageBlock, key: string): JSX.Element => {
     }
     case "link": {
       return (
-        <Anchor key={key} href={node.url}>
+        <Anchor
+          key={key}
+          href={node.url}
+        >
           {node.text ?? node.url}
         </Anchor>
       );
     }
     case "emoji":
       return (
-        <Span key={key} fontWeight="bold">
+        <Span
+          key={key}
+          fontWeight="bold"
+        >
           :{node.name}:
         </Span>
       );
     case "user":
-      return <UserName key={key} userID={node.user_id} />;
+      return (
+        <UserName
+          key={key}
+          userID={node.user_id}
+        />
+      );
     case "rich_text":
       return (
         <Span key={key}>
@@ -93,7 +107,7 @@ const renderNode = (node: MessageBlock, key: string): JSX.Element => {
       );
   }
 
-  console.log(node);
+  // Logger.log(node);
   return <Span key={key}></Span>;
 };
 
@@ -139,7 +153,7 @@ const MessageBoxImpl = (props: MessageBoxProps) => {
 
   const shouldNotDisplay = React.useMemo(() => {
     return !props.groups.some(
-      (g) => (g.contents && g.contents.length) || g.files.length
+      (g) => (g.contents && g.contents.length) || g.files.length,
     );
   }, [props.groups]);
 
@@ -244,18 +258,24 @@ const MessageBoxImpl = (props: MessageBoxProps) => {
                   >
                     <Span fontSize={font.value.msgSize}>
                       {g.contents.map((node, i) =>
-                        renderNode(node, i.toString())
+                        renderNode(node, i.toString()),
                       )}
                     </Span>
                   </Markup>
                 )}
-                <Box horizontalAlign={Align.START} expandHorizontal>
+                <Box
+                  horizontalAlign={Align.START}
+                  expandHorizontal
+                >
                   {g.files.map((f, idx) =>
                     f.mimetype?.startsWith("image/") ? (
-                      <AttachmentImage key={f.id ?? idx} file={f} />
+                      <AttachmentImage
+                        key={f.id ?? idx}
+                        file={f}
+                      />
                     ) : (
                       <></>
-                    )
+                    ),
                   )}
                 </Box>
               </Box>

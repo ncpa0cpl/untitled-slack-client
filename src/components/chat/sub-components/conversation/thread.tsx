@@ -1,37 +1,33 @@
 import React from "react";
 import { Align, Box } from "react-gjs-renderer";
-import type {
-  MessageBlockRichText,
-  SlackMessage,
-} from "../../../../services/slack-service/slack-types";
+import type { SlackMessage } from "../../../../services/slack-service/slack-types";
 import { MessageEditor } from "../../../message-editor/message-editor";
-import { MessageBox } from "./message";
 
 export type ThreadProps = {
   messages: SlackMessage[];
 };
 
-const textMock = (text: string): MessageBlockRichText[] => {
-  return [
-    {
-      type: "rich_text",
-      block_id: "",
-      elements: [
-        {
-          type: "rich_text_section",
-          elements: [
-            {
-              type: "text",
-              text,
-            },
-          ],
-        },
-      ],
-    },
-  ];
-};
+// const textMock = (text: string): MessageBlockRichText[] => {
+//   return [
+//     {
+//       type: "rich_text",
+//       block_id: "",
+//       elements: [
+//         {
+//           type: "rich_text_section",
+//           elements: [
+//             {
+//               type: "text",
+//               text,
+//             },
+//           ],
+//         },
+//       ],
+//     },
+//   ];
+// };
 
-export const Thread = (props: ThreadProps) => {
+export const Thread = (_: ThreadProps) => {
   // stub
   // const messages: SlackMessage[] = [
   //   {
@@ -58,18 +54,22 @@ export const Thread = (props: ThreadProps) => {
   // ];
 
   return (
-    <Box margin={[0, 0, 10, 45]} expandHorizontal horizontalAlign={Align.FILL}>
-      {props.messages.map((message) => (
+    <Box
+      margin={[0, 0, 10, 45]}
+      expandHorizontal
+      horizontalAlign={Align.FILL}
+    >
+      {/* {props.messages.map((message) => (
         <MessageBox
           key={message.id}
-          contents={message.contents}
+          groups={message.contents}
           userID={message.userID}
           username={message.username}
           sentAt={message.timestamp}
           files={message.files}
           subThreadMessage
         />
-      ))}
+      ))} */}
       <MessageEditor />
     </Box>
   );

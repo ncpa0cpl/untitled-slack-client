@@ -1,4 +1,5 @@
 import { quark } from "react-quarks";
+import type { SlackChannelService } from "../../services/channel-service/channels-service";
 import { PersistentSession } from "../persistent-session";
 
 export enum ConversationType {
@@ -33,13 +34,13 @@ export const Conversations = quark(
       },
       updateConversation(
         current,
-        conversations: Array<Partial<ConversationChannel> & { id: string }>
+        conversations: Array<Partial<ConversationChannel> & { id: string }>,
       ) {
         const newConversations: ConversationChannel[] = [];
 
         for (const currentConv of current.conversations) {
           const updatedConv = conversations.find(
-            (i) => i.id === currentConv.id
+            (i) => i.id === currentConv.id,
           );
 
           if (!updatedConv) {
@@ -63,45 +64,57 @@ export const Conversations = quark(
       useActiveDirectConversations: (state) =>
         state.conversations.filter(
           (channel) =>
-            channel.isMember && channel.type === ConversationType.Direct
+            channel.isMember && channel.type === ConversationType.Direct,
         ),
       useActiveGroupConversations: (state) =>
         state.conversations.filter(
           (channel) =>
             channel.isMember &&
             (channel.type === ConversationType.Group ||
-              channel.type === ConversationType.DirectGroup)
+              channel.type === ConversationType.DirectGroup),
         ),
       useActivePrivateConversations: (state) =>
         state.conversations.filter(
           (channel) =>
-            channel.isMember && channel.type === ConversationType.PrivateGroup
+            channel.isMember && channel.type === ConversationType.PrivateGroup,
         ),
     },
+  },
+);
+
+export const ActiveSlackChannelService = quark({
+  service: undefined as undefined | SlackChannelService,
+});
+
+ActiveSlackChannelService.subscribe((state) => {
+  if (state.service && state.service?.activeChannel == null) {
+    const { lastActiveConversation } = PersistentSession.get();
+    const { conversations } = Conversations.get();
+    const conversation = conversations.find(
+      (i) => i.id === lastActiveConversation,
+    );
+    if (conversation) {
+      state.service.selectChannel(conversation.id);
+    }
   }
-);
-
-export const ActiveConversation = quark(
-  undefined as undefined | ConversationChannel
-);
-
-ActiveConversation.subscribe((state) => {
-  PersistentSession.setLastActiveConversation(state?.id);
 });
 
 Conversations.subscribe((state) => {
-  if (ActiveConversation.get() == null) {
+  const channelService = ActiveSlackChannelService.get().service;
+  if (channelService != null && channelService.activeChannel == null) {
     const { lastActiveConversation } = PersistentSession.get();
 
     if (lastActiveConversation) {
       const conversation = state.conversations.find(
-        (i) => i.id === lastActiveConversation
+        (i) => i.id === lastActiveConversation,
       );
-      ActiveConversation.set(conversation);
+      if (conversation) {
+        channelService.selectChannel(conversation.id);
+      }
     }
   }
 
   if (state.conversations.length === 0) {
-    ActiveConversation.set(undefined);
+    ActiveSlackChannelService.set({ service: undefined });
   }
 });

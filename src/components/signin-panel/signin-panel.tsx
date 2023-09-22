@@ -11,6 +11,7 @@ import { useAsyncOperation } from "../../hooks/use-async-operation";
 import { navigate } from "../../main-stack";
 import { UserQuark } from "../../quarks/user";
 import { SlackService } from "../../services/slack-service/slack-service";
+import { Logger } from "../../utils/logger";
 import { AppMarkup } from "../app-markup/app-markup";
 
 type AuthArg =
@@ -69,20 +70,22 @@ export const SignInPanel = () => {
   React.useEffect(() => {
     (async () => {
       if (currentUser.value.loggedIn) {
-        authorization.execute({
+        Logger.info("User already logged in, authorizing via token.");
+
+        const result = await authorization.execute({
           authVia: "token",
           team: currentUser.value.teamID,
           userId: currentUser.value.id,
           token: currentUser.value.accessToken,
         });
+
+        if (!result?.ok && result?.error) {
+          Logger.error(result.error);
+        } else {
+          navigate("chat");
+        }
       }
     })();
-  }, [currentUser.value.loggedIn]);
-
-  React.useEffect(() => {
-    if (currentUser.value.loggedIn) {
-      navigate("chat");
-    }
   }, [currentUser.value.loggedIn]);
 
   return (
@@ -99,11 +102,20 @@ export const SignInPanel = () => {
       ) : (
         <Box>
           <AppMarkup>Team:</AppMarkup>
-          <SignInInput value={team} onChange={(v) => setTeam(v)} />
+          <SignInInput
+            value={team}
+            onChange={(v) => setTeam(v)}
+          />
           <AppMarkup>Email:</AppMarkup>
-          <SignInInput value={email} onChange={(v) => setEmail(v)} />
+          <SignInInput
+            value={email}
+            onChange={(v) => setEmail(v)}
+          />
           <AppMarkup>Password:</AppMarkup>
-          <SignInInput value={password} onChange={(v) => setPassword(v)} />
+          <SignInInput
+            value={password}
+            onChange={(v) => setPassword(v)}
+          />
           <Button
             horizontalAlign={Align.END}
             onClick={() =>
