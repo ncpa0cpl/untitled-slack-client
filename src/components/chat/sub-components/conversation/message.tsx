@@ -38,7 +38,7 @@ type MessageBoxProps = {
   username?: string;
   subThreadMessage?: boolean;
   subthread?: SlackMessage[];
-  groups: SlackMessageGroup["groups"];
+  entries: SlackMessageGroup["groups"];
 };
 
 const UserName = (props: { userID: string }) => {
@@ -149,13 +149,13 @@ const MessageBoxImpl = (props: MessageBoxProps) => {
     }
   }, [userInfo]);
 
-  const mainTs = props.groups[0]?.timestamp;
+  const mainTs = props.entries[0]?.timestamp;
 
   const shouldNotDisplay = React.useMemo(() => {
-    return !props.groups.some(
+    return !props.entries.some(
       (g) => (g.contents && g.contents.length) || g.files.length,
     );
-  }, [props.groups]);
+  }, [props.entries]);
 
   if (shouldNotDisplay) {
     return <></>;
@@ -237,7 +237,7 @@ const MessageBoxImpl = (props: MessageBoxProps) => {
               </Box>
             </PackEnd>
           </Box>
-          {props.groups.map((g) => {
+          {props.entries.map((g) => {
             return (
               <Box
                 key={g.id}

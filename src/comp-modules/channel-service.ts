@@ -1,60 +1,52 @@
 import { ComponentModule } from "react-better-components";
-import { ActiveSlackChannelService } from "../quarks/slack/conversations";
-import type { SlackChannelService } from "../services/channel-service/channels-service";
-import { Reactive } from "../utils/reactive";
+import type { SlackStore } from "../quarks/slack/slack-quark";
+import { SlackQuark } from "../quarks/slack/slack-quark";
+import { SlackChannelService } from "../services/channel-service/channels-service";
+import { $quark } from "../utils/quarks";
 
-class ChannelServiceProxy extends Reactive {
-  @Reactive.property
-  private _service?: SlackChannelService;
+const selectActiveChannelService = (s: SlackStore) => {
+  // return s.workspaces.find((w) => w.channels.find(channel => channel.));
+  const [workspaceID, channelID] = s.activeChannel ?? [];
 
-  constructor() {
-    super();
-
-    ActiveSlackChannelService.subscribe((state) => {
-      this.setService(state.service);
-    });
+  if (!workspaceID || !channelID) {
+    return;
   }
 
-  setService(service?: SlackChannelService) {
-    if (this._service) {
-      this._service["parent"] = undefined;
+  for (const workspace of s.workspaces) {
+    if (workspace.workspaceID === workspaceID) {
+      const data = workspace.channels.find(
+        (channel) => channel.channelID === channelID,
+      );
+
+      const service = SlackChannelService.getChannelService(
+        workspaceID,
+        channelID,
+      );
+
+      if (!service || !data) {
+        throw new Error("Impossible situation.");
+      }
+
+      return {
+        service,
+        data,
+      };
     }
-
-    if (service) {
-      service["parent"] = this;
-    }
-
-    this._service = service;
   }
-
-  public get service() {
-    return this._service;
-  }
-}
-
-const channelServiceProxy = new ChannelServiceProxy();
+};
 
 export class $ChannelService extends ComponentModule {
-  private value?: SlackChannelService;
+  private channel = $quark(this, SlackQuark, selectActiveChannelService);
 
   constructor(params: any) {
     super(params);
-
-    this.value = channelServiceProxy.service;
-    this.$effect(() => {
-      const unsubscribe = channelServiceProxy.on("changed", () => {
-        this.handleUpdate();
-      });
-      return unsubscribe;
-    }, []);
   }
 
-  private handleUpdate() {
-    this.value = channelServiceProxy.service;
-    this["_main"].forceUpdate();
+  public service() {
+    return this.channel.get()?.service;
   }
 
-  public get() {
-    return this.value;
+  public data() {
+    return this.channel.get()?.data;
   }
 }

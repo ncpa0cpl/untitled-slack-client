@@ -35,7 +35,7 @@ export const UsersIndex = quark(
       },
     },
     selectors: {
-      useUser: (state, id?: string) => {
+      user: (state, id?: string) => {
         if (!id) {
           return;
         }

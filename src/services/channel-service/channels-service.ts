@@ -1,51 +1,89 @@
-import { PersistentSession } from "../../quarks/persistent-session";
-import { Reactive } from "../../utils/reactive";
+import { SlackQuark } from "../../quarks/slack/slack-quark";
 import type { SlackService } from "../slack-service/slack-service";
 import { SlackChannel } from "./channel/channel";
 
-export class SlackChannelService extends Reactive {
-  @Reactive.property
-  private _activeChannel: SlackChannel | undefined = undefined;
-  private readonly channels: SlackChannel[] = [];
+export class SlackChannelService {
+  private static instances: Array<SlackChannelService> = [];
+
+  static getService(workspaceID: string) {
+    return SlackChannelService.instances.find(
+      (i) => i.workspaceID === workspaceID,
+    );
+  }
+
+  static getChannelService(workspaceID: string, channelID: string) {
+    const service = SlackChannelService.getService(workspaceID);
+
+    if (service) {
+      return service.getChannelService(channelID);
+    }
+  }
+
+  static createServiceForWorkspace(
+    service: SlackService,
+    ws: WebSocket,
+    workspaceID: string,
+  ) {
+    const existing = SlackChannelService.instances.find(
+      (i) => i.workspaceID === workspaceID,
+    );
+
+    if (existing) {
+      return existing;
+    }
+
+    const instance = new SlackChannelService(service, ws, workspaceID);
+    SlackChannelService.instances.push(instance);
+
+    return instance;
+  }
+
+  static disposeOfServiceForWorkspace(workspaceID: string) {
+    const existing = SlackChannelService.instances.find(
+      (i) => i.workspaceID === workspaceID,
+    );
+
+    if (existing) {
+      SlackChannelService.instances = SlackChannelService.instances.filter(
+        (i) => i.workspaceID !== workspaceID,
+      );
+      existing.dispose();
+    }
+  }
+
+  private channels: Array<SlackChannel> = [];
 
   constructor(
     private readonly service: SlackService,
     private readonly ws: WebSocket,
-  ) {
-    super();
-  }
+    public readonly workspaceID: string,
+  ) {}
 
   private createChannel(channelID: string): SlackChannel {
-    const channel = this.make(
-      SlackChannel,
+    const channel = new SlackChannel(
       this,
       this.service,
       this.ws,
+      this.workspaceID,
       channelID,
     );
+
     this.channels.push(channel);
+
     return channel;
   }
 
-  public getChannel(channelID: string): SlackChannel {
-    const existingChannel = this.channels.find(
-      (channel) => channel.channelID === channelID,
-    );
+  public getChannelService(channelID: string): SlackChannel {
+    const existing = this.channels.find((c) => c.channelID === channelID);
 
-    if (existingChannel) {
-      return existingChannel;
+    if (existing) {
+      return existing;
     }
 
     return this.createChannel(channelID);
   }
 
-  public selectChannel(channelID: string): void {
-    const channel = this.getChannel(channelID);
-    this._activeChannel = channel;
-    PersistentSession.setLastActiveConversation(channelID);
-  }
-
-  public get activeChannel(): SlackChannel | undefined {
-    return this._activeChannel;
+  private dispose() {
+    SlackQuark.removeWorkspace(this.workspaceID);
   }
 }

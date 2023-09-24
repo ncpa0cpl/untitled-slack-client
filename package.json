@@ -32,7 +32,7 @@
     "markdown-ast": "^0.3.0",
     "react": "^18.2.0",
     "react-better-components": "^1.0.0",
-    "react-quarks": "^2.0.2"
+    "react-quarks": "2.1.1-canary-1728535d017e54198f49ef91da711ce3cb321ae9.0"
   },
   "devDependencies": {
     "@types/luxon": "^3.2.0",

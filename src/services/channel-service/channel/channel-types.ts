@@ -44,15 +44,17 @@ export type WsSlackNotification =
   | WsEventMessage
   | WsEventMessageChanged;
 
+export type SlackMessageGroupEntry = {
+  id: string;
+  contents?: MessageBlock[];
+  files: MessageFile[];
+  timestamp?: number;
+  edited?: true;
+};
+
 export type SlackMessageGroup = {
   id: string;
-  groups: Array<{
-    id: string;
-    contents?: MessageBlock[];
-    files: MessageFile[];
-    timestamp?: number;
-    edited?: true;
-  }>;
+  entries: Array<SlackMessageGroupEntry>;
 } & (
   | { userID: string; username?: undefined }
   | { userID?: undefined; username: string }

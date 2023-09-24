@@ -74,7 +74,7 @@ export class QuarkFileSyncService {
    */
   static async registerQuark<T extends { firsLoadCompleted: boolean }>(
     name: string,
-    quark: Quark<T, any>,
+    quark: Quark<T, any, any, any>,
   ) {
     const savedState = await this.load<T>(this.getFilenameFor(name));
 

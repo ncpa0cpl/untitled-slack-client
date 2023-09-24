@@ -25,20 +25,38 @@ const color = (
   return `${COLORS[c]}${str}${COLORS.unset}`;
 };
 
+const stringify = (v: any) => {
+  switch (typeof v) {
+    case "object":
+      return JSON.stringify(v);
+    default:
+      return String(v);
+  }
+};
+
 export class Logger {
   static info(...args: any[]) {
-    print(color("cyan", "INFO: ") + args.map(String).join(" "));
+    // @ts-expect-error
+    print(color("cyan", "INFO: ") + args.map(stringify).join(" "));
   }
 
   static log(...args: any) {
-    console.log(...args);
+    // @ts-expect-error
+    print(color("lightWhite", "LOG: ") + args.map(stringify).join(" "));
   }
 
   static warn(...args: any) {
-    console.warn(...args);
+    // @ts-expect-error
+    print(color("lightYellow", "WARN: ") + args.map(stringify).join(" "));
   }
 
   static error(...args: any) {
-    console.error(...args);
+    // @ts-expect-error
+    print(color("lightRed", "ERROR: ") + args.map(stringify).join(" "));
+  }
+
+  static debug(...args: any) {
+    // @ts-expect-error
+    print(color("lightMagenta", "DEBUG: ") + args.map(stringify).join(" "));
   }
 }

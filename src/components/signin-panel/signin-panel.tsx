@@ -29,17 +29,21 @@ type AuthArg =
     };
 
 const authOperation = async (args: AuthArg) => {
-  if (args.authVia === "credentials") {
-    const { team, email, password } = args;
+  try {
+    if (args.authVia === "credentials") {
+      const { team, email, password } = args;
 
-    if (email.length < 1 || password.length < 1 || team.length < 1) {
-      return;
+      if (email.length < 1 || password.length < 1 || team.length < 1) {
+        return;
+      }
+
+      return await SlackService.auth.logIn(team, email, password);
+    } else {
+      const { team, token, userId } = args;
+      return await SlackService.auth.authorizeUser(team, token, userId);
     }
-
-    return await SlackService.auth.logIn(team, email, password);
-  } else {
-    const { team, token, userId } = args;
-    return await SlackService.auth.authorizeUser(team, token, userId);
+  } catch (e) {
+    Logger.error(e);
   }
 };
 

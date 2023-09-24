@@ -1,6 +1,6 @@
 import type { WebClient } from "@slack/web-api";
 import type { AxiosInstance } from "axios";
-import { SlackQuark } from "../../quarks/slack/slack-client";
+import { SlackQuark } from "../../quarks/slack/slack-quark";
 import { SlackServiceAuthorizationModule } from "./modules/slack-authorization-service";
 import { SlackServiceChannelsModule } from "./modules/slack-channels-service";
 import { SlackServiceUsersModule } from "./modules/slack-users-service";
@@ -12,14 +12,17 @@ export class SlackService {
     const state = SlackQuark.get();
 
     if (team) {
-      return state.workspaces.find((w) => w.team === team)?.service;
+      return state.workspaces.find((w) => w.workspaceID === team)?.service;
     }
 
-    return state.workspaces.find((w) => w.team === state.activeWorkspace)
+    return state.workspaces.find((w) => w.workspaceID === state.activeWorkspace)
       ?.service;
   }
 
-  constructor(private readonly client: WebClient) {}
+  constructor(
+    private readonly client: WebClient,
+    public readonly workspaceID: string,
+  ) {}
 
   users = new SlackServiceUsersModule(this);
 

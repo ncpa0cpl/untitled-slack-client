@@ -4,17 +4,31 @@ import type { Quark } from "react-quarks";
 import type { ReadonlyQuark } from "./types";
 
 export function $quark<T, S = T>(
-  component: BetterComponent,
-  quark: Quark<T, any>,
+  component: BetterComponent | ComponentModule,
+  quark: Quark<T, any, any, any>,
   selector: (v: T) => S = (v) => v as any,
+  additionalDependencies?: Quark<T, any, any, any>[],
 ) {
+  if (additionalDependencies) {
+    return component.$externalStore(
+      (cb) => {
+        const cancel: Function[] = [quark.subscribe(cb).cancel];
+        for (const q of additionalDependencies) {
+          cancel.push(q.subscribe(cb).cancel);
+        }
+        return () => {
+          for (const c of cancel) {
+            c();
+          }
+        };
+      },
+      () => selector(quark.get()),
+    );
+  }
+
   return component.$externalStore(
-    (cb) => {
-      return quark.subscribe(cb).cancel;
-    },
-    () => {
-      return selector(quark.get());
-    },
+    (cb) => quark.subscribe(cb).cancel,
+    () => selector(quark.get()),
   );
 }
 

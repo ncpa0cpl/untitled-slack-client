@@ -123,7 +123,7 @@ export const ImageIndex = quark(
       },
     },
     selectors: {
-      useProfilePicture(state, uid?: string, size?: ProfilePicture["size"]) {
+      profilePicture(state, uid?: string, size?: ProfilePicture["size"]) {
         if (!uid) return undefined;
 
         if (size != null) {
@@ -153,14 +153,14 @@ export const ImageIndex = quark(
             image.type === ImageType.ProfilePicture && image.uid === uid
         );
       },
-      useUserImage(state, contentID: string) {
+      userImage(state, contentID: string) {
         return state.images.find(
           (image) =>
             image.type === ImageType.UserContent &&
             image.contentID === contentID
         );
       },
-      useAttachmentImage(state, contentID?: string) {
+      attachmentImage(state, contentID?: string) {
         return state.images.find(
           (image) =>
             image.type === ImageType.Attachment && image.contentID === contentID

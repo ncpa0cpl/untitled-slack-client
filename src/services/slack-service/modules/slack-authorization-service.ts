@@ -1,6 +1,7 @@
+import type { RtmConnectResponse } from "@slack/web-api";
 import { WebClient } from "@slack/web-api";
 import type { User as SlackUser } from "@slack/web-api/dist/response/UsersInfoResponse";
-import { SlackQuark } from "../../../quarks/slack/slack-client";
+import { SlackQuark } from "../../../quarks/slack/slack-quark";
 import { UserQuark, type User } from "../../../quarks/user";
 import { RequestError } from "../../../utils/errors/fetch-error";
 import { Logger } from "../../../utils/logger";
@@ -34,34 +35,54 @@ export class AuthorizationError extends Error {
 }
 
 export class SlackServiceAuthorizationModule {
-  private createClient(token?: string): WebClient {
+  private createClient(token?: string): AsyncResult<WebClient> {
     const client = new WebClient(token, {
       maxRequestConcurrency: 10,
       retryConfig: {
-        minTimeout: 100,
-        maxTimeout: 2500,
+        minTimeout: 500,
+        maxTimeout: 5000,
         randomize: true,
-        retries: 5,
+        retries: 3,
       },
     });
 
-    return client;
+    if (token)
+      // ensure that the client is authorized
+      return client.auth
+        .test()
+        .then(() => {
+          return ok(client);
+        })
+        .catch((err) => {
+          Logger.error("Failed to authorize the client.", err);
+          return err(err);
+        });
+
+    return Promise.resolve(ok(client));
   }
 
   private async createWebSocket(
     client: WebClient,
   ): AsyncResult<WebSocket, Error> {
-    const rtm = await client.rtm.connect();
+    const rtm = await client.rtm
+      .connect()
+      .then(ok<RtmConnectResponse>)
+      .catch(err);
 
     if (!rtm.ok) {
       return err(new RequestError(rtm.error, rtm));
     }
 
-    if (!rtm.url) {
+    if (!rtm.value.ok) {
+      return err(new RequestError(rtm.value.error, rtm));
+    }
+
+    if (!rtm.value.url) {
       return err(new Error("No url in response"));
     }
 
-    const ws = new WebSocket(rtm.url);
+    const ws = new WebSocket(rtm.value.url);
+
     return ok(ws);
   }
 
@@ -70,7 +91,13 @@ export class SlackServiceAuthorizationModule {
     email: string,
     password: string,
   ): Promise<Result<User, AuthorizationError | Error>> {
-    const client = this.createClient();
+    const result = await this.createClient();
+
+    if (!result.ok) {
+      return result;
+    }
+
+    const client = result.value;
 
     const findTeamResponse = await client.apiCall("auth.findTeam", {
       domain: teamDomain,
@@ -87,8 +114,11 @@ export class SlackServiceAuthorizationModule {
     });
 
     if (!signInResponse.ok) {
+      Logger.error("Failed to sign in.", signInResponse.error);
       return err(new AuthorizationError(AuthResultCode.UserAuthFailed));
     }
+
+    Logger.info("User has been signed in successfully.");
 
     const authResult = await this.authorizeUser(
       findTeamResponse.team_id as string,
@@ -136,28 +166,30 @@ export class SlackServiceAuthorizationModule {
     token: string,
     userID: string,
   ): Promise<Result<SlackUser, AuthorizationError | Error>> {
-    const client = this.createClient(token);
+    const result = await this.createClient(token);
+
+    if (!result.ok) {
+      return result;
+    }
+
+    const client = result.value;
     const wsResult = await this.createWebSocket(client);
 
     if (!wsResult.ok) {
+      Logger.error("Failed to create a websocket.", wsResult.error);
       return wsResult;
     }
 
     Logger.info("User has been authorized.");
 
-    try {
-      SlackQuark.activateWorkspace(team, client, wsResult.value);
-    } catch (e) {
-      Logger.error(e);
-      return err(new AuthorizationError(AuthResultCode.UserInfoFetchFailed));
-    }
+    SlackQuark.activateWorkspace(team, client, wsResult.value);
 
     const userInfo = await client.users.info({
       user: userID,
     });
 
     if (!userInfo.ok || !userInfo.user) {
-      Logger.error(userInfo.error);
+      Logger.error("Failed to retrieve the user info.", userInfo.error);
       return err(new AuthorizationError(AuthResultCode.UserInfoFetchFailed));
     }
 

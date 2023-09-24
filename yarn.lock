@@ -1111,10 +1111,10 @@ ignore@^5.2.0, ignore@^5.2.4:
   resolved "https://registry.yarnpkg.com/ignore/-/ignore-5.2.4.tgz#a291c0c6178ff1b960befe47fcdec301674a6324"
   integrity sha512-MAb38BcSbH0eHNBxn7ql2NH/kX33OkB3lZ1BNdh7ENeRChHTYsTvWrMubiIAMNS2llXEEgZ1MUOBtXChP3kaFQ==
 
-immer@>9.0.0:
-  version "9.0.19"
-  resolved "https://registry.yarnpkg.com/immer/-/immer-9.0.19.tgz#67fb97310555690b5f9cd8380d38fc0aabb6b38b"
-  integrity sha512-eY+Y0qcsB4TZKwgQzLaE/lqYMlKhv5J9dyd2RhhtGhNo2njPXDqU9XPfcNfa3MIDsdtZt5KlkIsirlo4dHsWdQ==
+immer@^10.0.2:
+  version "10.0.2"
+  resolved "https://registry.yarnpkg.com/immer/-/immer-10.0.2.tgz#11636c5b77acf529e059582d76faf338beb56141"
+  integrity sha512-Rx3CqeqQ19sxUtYV9CU911Vhy8/721wRFnJv3REVGWUmoAcIwzifTsdmJte/MV+0/XpM35LZdQMBGkRIoLPwQA==
 
 import-fresh@^3.2.1:
   version "3.3.0"
@@ -1272,7 +1272,7 @@ lodash.merge@^4.6.2:
   resolved "https://registry.yarnpkg.com/lodash.merge/-/lodash.merge-4.6.2.tgz#558aa53b43b661e1925a0afdfa36a9a1085fe57a"
   integrity sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==
 
-lodash@>4.0.0:
+lodash@^4.17.21:
   version "4.17.21"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
@@ -1296,10 +1296,15 @@ lru-cache@^6.0.0:
   resolved "https://registry.yarnpkg.com/lru-cache/-/lru-cache-10.0.1.tgz#0a3be479df549cca0e5d693ac402ff19537a6b7a"
   integrity sha512-IJ4uwUTi2qCccrioU6g9g/5rvvVl13bsdczUUcqbciD9iLr095yj8DQKdObriEvuNSx325N1rV1O0sJFszx75g==
 
-luxon@>2.0.0, luxon@^3.2.1:
+luxon@^3.2.1:
   version "3.2.1"
   resolved "https://registry.yarnpkg.com/luxon/-/luxon-3.2.1.tgz#14f1af209188ad61212578ea7e3d518d18cee45f"
   integrity sha512-QrwPArQCNLAKGO/C+ZIilgIuDnEnKx5QYODdDtbFaxzsbZcc/a7WFq7MhsVYgRlwawLtvOUESTlfJ+hc/USqPg==
+
+luxon@^3.4.3:
+  version "3.4.3"
+  resolved "https://registry.yarnpkg.com/luxon/-/luxon-3.4.3.tgz#8ddf0358a9492267ffec6a13675fbaab5551315d"
+  integrity sha512-tFWBiv3h7z+T/tDaoxA8rqTxy1CHV6gHS//QdaH4pulbq/JuBSGgQspQQqcgnwdAx6pNI7cmvz5Sv/addzHmUg==
 
 markdown-ast@^0.3.0:
   version "0.3.0"
@@ -1848,15 +1853,15 @@ react-gnome@ncpa0cpl/react-gnome#0.0.1-alpha-10:
     termx-markup "1.1.1"
     whatwg-url-without-unicode "^8.0.0-3"
 
-react-quarks@^2.0.2:
-  version "2.0.2"
-  resolved "https://registry.yarnpkg.com/react-quarks/-/react-quarks-2.0.2.tgz#74e8de591573b913ca2e55444faebce23d109f3d"
-  integrity sha512-eumQMq60u6tBzOTUzWE883KRM5bOBa7WACjywSqBIzhJs7AN1rLHXJn3Nt+WOWwAPenXJh1e8ThvAQvqN8y1Ug==
+react-quarks@2.1.1-canary-1728535d017e54198f49ef91da711ce3cb321ae9.0:
+  version "2.1.1-canary-1728535d017e54198f49ef91da711ce3cb321ae9.0"
+  resolved "https://registry.yarnpkg.com/react-quarks/-/react-quarks-2.1.1-canary-1728535d017e54198f49ef91da711ce3cb321ae9.0.tgz#6c54deabca96ed96575f8a24169ca6a43a98693a"
+  integrity sha512-i7XQzLg7fzfO0TPJP99b7i3Rp7dug7HRUvpfEPiaNOrdoFl4nkKqQ/7z2KdqRkIrr8h+9lDpqQVLmHky6t4b6w==
   dependencies:
-    immer ">9.0.0"
-    lodash ">4.0.0"
-    luxon ">2.0.0"
-    use-sync-external-store ">1.0.0"
+    immer "^10.0.2"
+    lodash "^4.17.21"
+    luxon "^3.4.3"
+    use-sync-external-store "^1.2.0"
 
 react@^18.2.0:
   version "18.2.0"
@@ -2061,7 +2066,7 @@ uri-js@^4.2.2:
   dependencies:
     punycode "^2.1.0"
 
-use-sync-external-store@>1.0.0:
+use-sync-external-store@^1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/use-sync-external-store/-/use-sync-external-store-1.2.0.tgz#7dbefd6ef3fe4e767a0cf5d7287aacfb5846928a"
   integrity sha512-eEgnFxGQ1Ife9bzYs6VLi8/4X6CObHMw9Qr9tPY43iKwsPw8xE8+EFsf/2cFZ5S3esXgpWgtSCtLNS41F+sKPA==

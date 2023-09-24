@@ -4,17 +4,28 @@ import type {
 } from "@slack/web-api/dist/response/ConversationsListResponse";
 import type { AxiosRequestConfig, AxiosResponse } from "axios";
 import { ImageIndex } from "../../../quarks/image-index";
-import type { ConversationChannel } from "../../../quarks/slack/conversations";
+import type { ChannelData } from "../../../quarks/slack/slack-quark";
 import {
   ConversationType,
-  Conversations,
-} from "../../../quarks/slack/conversations";
+  SlackQuark,
+} from "../../../quarks/slack/slack-quark";
 import { RequestError } from "../../../utils/errors/fetch-error";
 import { generateUID } from "../../../utils/generate-uid";
 import type { AsyncResult, Result } from "../../../utils/result";
 import { AsyncAll, err, ok } from "../../../utils/result";
 import type { SlackService } from "../slack-service";
 import type { MessageFile, SlackMessage } from "../slack-types";
+
+export type ConversationChannel = {
+  id: string;
+  name: string;
+  isOrgShared: boolean;
+  memberCount: number;
+  isMember: boolean;
+  type: ConversationType;
+  uid?: string;
+  unreadCount?: number;
+};
 
 type UserCounts = {
   ok: boolean;
@@ -252,27 +263,12 @@ export class SlackServiceChannelsModule {
   }
 
   async getAllConversations(): AsyncResult<void, Error | Error[]> {
+    const client = this.mainService.getClient();
     const conversations = await this.requestAllConversations();
 
     if (!conversations.ok) {
       return conversations;
     }
-
-    Conversations.setConversations(conversations.value);
-
-    return ok();
-  }
-
-  async getConversationsInfo(): AsyncResult {
-    const client = this.mainService.getClient();
-    const conversations = Conversations.get().conversations;
-
-    type ConvUpdate = {
-      id: string;
-      unreadCount: number;
-    };
-
-    const updates: ConvUpdate[] = [];
 
     const counts: UserCounts = (await client.apiCall("users.counts")) as any;
 
@@ -280,24 +276,33 @@ export class SlackServiceChannelsModule {
       return err(new Error("Failed to get user counts"));
     }
 
-    for (const channel of counts.channels) {
-      if (!channel.is_member) {
-        continue;
+    const channels = conversations.value.map((c): ChannelData => {
+      let unreadCount = 0;
+      for (const channel of counts.channels) {
+        if (channel.is_member && channel.id === c.id) {
+          unreadCount =
+            channel.unread_count_display ?? channel.unread_count ?? 0;
+        }
       }
 
-      const convo = conversations.find((c) => c.id === channel.id);
+      return {
+        channelID: c.id,
+        messages: [],
+        userTyping: [],
+        isLoading: false,
+        cursor: undefined,
+        info: {
+          isMember: c.isMember,
+          isOrgShared: c.isOrgShared,
+          memberCount: c.memberCount,
+          name: c.name,
+          type: c.type,
+          unreadCount,
+        },
+      };
+    });
 
-      if (!convo) {
-        continue;
-      }
-
-      updates.push({
-        id: convo.id,
-        unreadCount: channel.unread_count_display ?? channel.unread_count ?? 0,
-      });
-    }
-
-    Conversations.updateConversation(updates);
+    SlackQuark.addChannels(this.mainService.workspaceID, channels);
 
     return ok();
   }

@@ -7,7 +7,7 @@ export abstract class Component<
   P extends object = object,
 > extends BetterComponent<P> {
   public $quark<T, S = T>(
-    quark: Quark<T, any>,
+    quark: Quark<T, any, any, any>,
     selector: (v: T) => S = (v) => v as any,
   ) {
     return $quark(this, quark, selector);

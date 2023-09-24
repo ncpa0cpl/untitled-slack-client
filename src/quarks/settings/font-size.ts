@@ -17,10 +17,10 @@ export const FontSettings = quark(
       },
     },
     selectors: {
-      useMsgSettings(state) {
+      msgSettings(state) {
         return state.msgSize;
       },
-      useUiSettings(state) {
+      uiSettings(state) {
         return state.uiSize;
       },
     },

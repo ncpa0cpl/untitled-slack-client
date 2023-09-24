@@ -1,6 +1,9 @@
-import { Conversations } from "../../../quarks/slack/conversations";
+import type {
+  ChannelData,
+  MessageToAdd,
+} from "../../../quarks/slack/slack-quark";
+import { SlackQuark } from "../../../quarks/slack/slack-quark";
 import { Bound } from "../../../utils/decorators/bound";
-import { Reactive } from "../../../utils/reactive";
 import type { AsyncResult } from "../../../utils/result";
 import { err, ok } from "../../../utils/result";
 import type { SlackService } from "../../slack-service/slack-service";
@@ -8,7 +11,7 @@ import type { SlackMessage } from "../../slack-service/slack-types";
 import type { SlackChannelService } from "../channels-service";
 import type {
   SlackMessageGroup,
-  UserTypingInfo,
+  SlackMessageGroupEntry,
   WsSlackNotification,
 } from "./channel-types";
 
@@ -16,7 +19,7 @@ function msgCompare(a: SlackMessage, b: SlackMessage) {
   return (a.timestamp ?? 0) - (b.timestamp ?? 0);
 }
 
-export class SlackChannel extends Reactive {
+export class SlackChannel {
   private static mapMessages(msgs: SlackMessage[]): SlackMessageGroup[] {
     msgs.sort(msgCompare);
 
@@ -27,13 +30,13 @@ export class SlackChannel extends Reactive {
       const lastMsg = groups.at(-1);
 
       if (lastMsg?.userID === message?.userID) {
-        lastMsg!.groups.push(message);
+        lastMsg!.entries.push(message);
       } else {
         const g: SlackMessageGroup = {
           id: message.id,
           userID: message.userID,
           username: message.username,
-          groups: [message],
+          entries: [message],
         } as SlackMessageGroup;
         groups.push(g);
       }
@@ -42,42 +45,29 @@ export class SlackChannel extends Reactive {
     return groups;
   }
 
-  @Reactive.property
-  private _messageGroups: SlackMessageGroup[] = [];
-  @Reactive.property
-  private _usersTyping: UserTypingInfo[] = [];
-  @Reactive.property
-  private _isLoading = false;
-  private cursor?: string;
-
-  private interval: NodeJS.Timeout | null = null;
-  private activeChannelSub;
-  public readonly conversationInfo;
-
   constructor(
     private readonly channelService: SlackChannelService,
     private readonly service: SlackService,
     private readonly ws: WebSocket,
+    public readonly workspaceID: string,
     public readonly channelID: string,
   ) {
-    super();
-
     this.loadMessages(undefined, true);
     this.ws.addEventListener("message", this.onWsEvent);
 
-    let prevActive = this.channelService.activeChannel;
-    this.activeChannelSub = this.channelService.on("changed", () => {
-      if (prevActive !== this.channelService.activeChannel) {
-        this.onActiveChannelChange(this.channelService.activeChannel);
-        prevActive = this.channelService.activeChannel;
-      }
-    });
+    // let prevActive = this.channelService.activeChannel;
+    // this.activeChannelSub = this.channelService.on("changed", () => {
+    //   if (prevActive !== this.channelService.activeChannel) {
+    //     this.onActiveChannelChange(this.channelService.activeChannel);
+    //     prevActive = this.channelService.activeChannel;
+    //   }
+    // });
 
-    this.interval = setInterval(() => this.flushUserTypings(), 1000);
+    // this.interval = setInterval(() => this.flushUserTypings(), 1000);
 
-    this.conversationInfo = Conversations.get().conversations.find(
-      (c) => c.id === channelID,
-    );
+    // this.conversationInfo = Conversations.get().conversations.find(
+    //   (c) => c.id === channelID,
+    // );
   }
 
   @Bound()
@@ -99,7 +89,7 @@ export class SlackChannel extends Reactive {
               userID: data.message.user,
               files: data.message.files ?? [],
             };
-            this.updateMessage(msg);
+            this.handleMessageChanged(msg);
             break;
           }
           default: {
@@ -110,94 +100,107 @@ export class SlackChannel extends Reactive {
               userID: data.user,
               files: data.files ?? [],
             };
-
-            this._usersTyping = this._usersTyping.filter(
-              (u) => u.uid !== data.user,
-            );
-
+            this.storeRemoveUserTyping(data.user);
             this.addNewMessage(msg);
-
             break;
           }
         }
         break;
       }
       case "user_typing": {
-        this._usersTyping = this._usersTyping
-          .filter((u) => u.uid !== data.user)
-          .concat({
-            uid: data.user,
-            ts: Date.now(),
-          });
+        this.storeAddUserTyping(data.user);
+        setTimeout(() => this.storeClearUserTyping(), 5000);
         break;
       }
     }
   }
 
-  @Bound()
-  private onActiveChannelChange(active?: SlackChannel): void {
-    if (active?.channelID !== this.channelID) {
-      this._usersTyping = [];
-      clearInterval(this.interval!);
-      this.interval = null;
-    } else if (this.interval == null) {
-      this.interval = setInterval(() => this.flushUserTypings(), 1000);
+  private getChannelData(): ChannelData {
+    const channel = SlackQuark.selectChannel(this.workspaceID, this.channelID);
+
+    if (!channel) {
+      throw new Error("Channel not found");
     }
+
+    return channel;
   }
 
-  private flushUserTypings() {
-    if (this._usersTyping.length > 0) {
-      this._usersTyping = this._usersTyping.filter(
-        (u) => Date.now() - u.ts < 5000,
-      );
-    }
+  private storeUpdateChannel(
+    update: Partial<Omit<ChannelData, "info" | "channelID">>,
+  ): void {
+    SlackQuark.updateChannel(this.workspaceID, this.channelID, update);
+  }
+
+  private storeUpdateMessage(
+    messageID: string,
+    update: (prev: SlackMessageGroupEntry) => SlackMessageGroupEntry,
+  ): void {
+    SlackQuark.updateMessage(
+      this.workspaceID,
+      this.channelID,
+      messageID,
+      update,
+    );
+  }
+
+  private storeAddMessage(msg: MessageToAdd) {
+    SlackQuark.addMessage(this.workspaceID, this.channelID, msg);
+  }
+
+  private storeAddUserTyping(userID: string) {
+    const channel = this.getChannelData();
+    this.storeUpdateChannel({
+      userTyping: channel.userTyping
+        .filter((u) => u.uid !== userID)
+        .concat({
+          uid: userID,
+          ts: Date.now(),
+        }),
+    });
+  }
+
+  private storeRemoveUserTyping(userID: string) {
+    const channel = this.getChannelData();
+    this.storeUpdateChannel({
+      userTyping: channel.userTyping.filter((u) => u.uid !== userID),
+    });
+  }
+
+  private storeClearUserTyping() {
+    const channel = this.getChannelData();
+    const now = Date.now();
+    this.storeUpdateChannel({
+      userTyping: channel.userTyping.filter((u) => {
+        return now - u.ts < 5000;
+      }),
+    });
   }
 
   private addNewMessage(msg: SlackMessage): void {
-    const last = this._messageGroups.at(-1);
-
-    if (last && last.userID === msg.userID) {
-      this._messageGroups = this._messageGroups.slice(0, -1).concat({
-        ...last,
-        groups: last.groups.concat(msg),
-      });
-    }
-
-    this._messageGroups = this._messageGroups.concat({
-      userID: msg.userID,
-      username: msg.username,
-      id: msg.id,
-      groups: [msg],
-    } as SlackMessageGroup);
+    this.storeAddMessage(msg);
   }
 
-  private updateMessage(msg: SlackMessage): void {
-    const groups = this._messageGroups;
-
-    for (let i = 0; i < groups.length; i++) {
-      const group = groups[i]!;
-      const index = group.groups.findIndex((g) => g.id === msg.id);
-
-      if (index !== -1) {
-        const newGroup = { ...group, groups: group.groups.slice() };
-        newGroup.groups[index] = msg;
-        newGroup.groups[index]!.edited = true;
-        const newState = groups.map((g) => (g.id === group.id ? newGroup : g));
-        this._messageGroups = newState;
-        return;
-      }
-    }
+  private handleMessageChanged(msg: SlackMessage): void {
+    this.storeUpdateMessage(msg.id, (prev) => {
+      return {
+        id: prev.id,
+        timestamp: prev.timestamp,
+        contents: msg.contents,
+        files: msg.files,
+        edited: true,
+      };
+    });
   }
 
   private async loadMessages(nextCursor?: string, reset = false): AsyncResult {
-    if (this._isLoading) {
+    const channel = this.getChannelData();
+
+    if (channel.isLoading) {
       return err(new Error("Message fetching is already in progress"));
     }
 
-    this._isLoading = true;
-    // using _ = defer(() => {
-    //   this.isLoading = false;
-    // });
+    this.storeUpdateChannel({ isLoading: true });
+
     try {
       const result = await this.service.channels.fetchMessages(
         this.channelID,
@@ -211,39 +214,30 @@ export class SlackChannel extends Reactive {
       let newMessages = SlackChannel.mapMessages(result.value.messages);
 
       if (!reset) {
-        newMessages = newMessages.concat(this._messageGroups);
+        newMessages = newMessages.concat(channel.messages);
       } else {
         newMessages = newMessages.slice();
       }
 
-      this._messageGroups = newMessages;
-      this.cursor = result.value.cursor;
+      this.storeUpdateChannel({
+        cursor: result.value.cursor,
+        messages: newMessages,
+        isLoading: false,
+      });
 
       return ok();
-    } finally {
-      this._isLoading = false;
+    } catch (e) {
+      this.storeUpdateChannel({ isLoading: false });
+      throw e;
     }
   }
 
   public async loadMore(): AsyncResult {
-    return this.loadMessages(this.cursor);
-  }
-
-  public get isLoading(): boolean {
-    return this._isLoading;
-  }
-
-  public get messages(): ReadonlyArray<SlackMessageGroup> {
-    return this._messageGroups;
-  }
-
-  public get usersTyping(): ReadonlyArray<UserTypingInfo> {
-    return this._usersTyping;
+    const channel = this.getChannelData();
+    return this.loadMessages(channel.cursor);
   }
 
   public dispose(): void {
     this.ws.removeEventListener("message", this.onWsEvent);
-    this.activeChannelSub();
-    clearInterval(this.interval!);
   }
 }

@@ -48,7 +48,7 @@ export type SlackMessageGroup = {
 export class ConversationBox extends Component {
   private declare mainWindow: WindowElement;
 
-  private channelService = this.$mod($ChannelService);
+  private channel = this.$mod($ChannelService);
   private scrollBoxRef = React.createRef<Rg.Element.ScrollBoxElement | null>();
   private isFirstUserScroll = true;
   private lastPosFromBottom = 0;
@@ -57,7 +57,7 @@ export class ConversationBox extends Component {
   private loadError = this.$state<Error | null>(null);
 
   private get activeChannel() {
-    return this.channelService.get()?.activeChannel;
+    return this.channel.data();
   }
 
   private get isLoading() {
@@ -69,7 +69,7 @@ export class ConversationBox extends Component {
   }
 
   private get userTyping() {
-    return this.activeChannel?.usersTyping;
+    return this.activeChannel?.userTyping;
   }
 
   constructor(props: any) {
@@ -151,20 +151,13 @@ export class ConversationBox extends Component {
       this.isFirstUserScroll = true;
     }
 
-    const res = await this.activeChannel?.loadMore();
+    const res = await this.channel?.service()?.loadMore();
 
     if (res && !res.ok) {
       this.loadError.set(res.error);
     }
 
     this.loadingInProgress = false;
-
-    // return new Promise<void>(async (resolve) => {
-    //   setTimeout(() => {
-    //     this.loadingInProgress = false;
-    //     resolve();
-    //   }, 100);
-    // });
   }
 
   @Bound()
@@ -186,9 +179,7 @@ export class ConversationBox extends Component {
         verticalAlign={Align.FILL}
         horizontalAlign={Align.FILL}
       >
-        <ConversationHeader
-          title={this.activeChannel?.conversationInfo?.name ?? ""}
-        />
+        <ConversationHeader title={this.activeChannel?.info.name ?? ""} />
         {this.isLoading && (
           <Box
             expand={this.messages.length === 0}
@@ -228,7 +219,7 @@ export class ConversationBox extends Component {
                     key={message.id}
                     userID={message.userID}
                     username={message.username}
-                    groups={message.groups}
+                    entries={message.entries}
                   />
                 ))
               )}

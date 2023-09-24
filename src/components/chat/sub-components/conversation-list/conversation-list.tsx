@@ -1,31 +1,47 @@
 import React from "react";
 import { Align, Box, ScrollBox, Separator } from "react-gjs-renderer";
-import { $ChannelService } from "../../../../comp-modules/channel-service";
-import type { ConversationChannel } from "../../../../quarks/slack/conversations";
 import {
-  ActiveSlackChannelService,
-  Conversations,
-} from "../../../../quarks/slack/conversations";
+  ConversationType,
+  SlackQuark,
+} from "../../../../quarks/slack/slack-quark";
 import { Component } from "../../../../utils/custom-component";
 import { ConvListButton } from "./conv-list-button";
 
 const List = (props: {
-  activeConvID: string;
-  useConversations: () => ConversationChannel[];
+  activeChannelID: string;
+  conversations: "private" | "group" | "direct";
 }) => {
-  const channels = props.useConversations();
+  const workspace = SlackQuark.useActiveWorkspace();
+  const channels = React.useMemo(
+    () =>
+      workspace?.channels.filter((channel) => {
+        switch (props.conversations) {
+          case "private":
+            return channel.info.type === ConversationType.PrivateGroup;
+          case "group":
+            return (
+              channel.info.type === ConversationType.Group ||
+              channel.info.type === ConversationType.DirectGroup
+            );
+          case "direct":
+            return channel.info.type === ConversationType.Direct;
+          default:
+            return false;
+        }
+      }) ?? [],
+    [workspace, props.conversations],
+  );
 
   return (
     <>
       {channels.map((channel) => (
         <ConvListButton
-          key={channel.id}
-          label={channel.name}
-          unreadCount={channel.unreadCount}
-          isActive={props.activeConvID === channel.id}
+          key={channel.channelID}
+          label={channel.info.name}
+          unreadCount={channel.info.unreadCount}
+          isActive={props.activeChannelID === channel.channelID}
           onClick={() => {
-            const { service } = ActiveSlackChannelService.get();
-            service?.selectChannel(channel.id);
+            SlackQuark.openChannel(workspace!.workspaceID, channel.channelID);
           }}
         />
       ))}
@@ -34,13 +50,10 @@ const List = (props: {
 };
 
 export class ConversationList extends Component {
-  private channelService = this.$mod($ChannelService);
-  private get activeChannel() {
-    return this.channelService.get()?.activeChannel;
-  }
+  private slackData = this.$quark(SlackQuark);
 
   render() {
-    const activeChannelID = this.activeChannel?.channelID ?? "";
+    const [, activeChannelID = ""] = this.slackData.get().activeChannel ?? [];
 
     return (
       <Box
@@ -65,18 +78,24 @@ export class ConversationList extends Component {
             horizontalAlign={Align.FILL}
           >
             <List
-              activeConvID={activeChannelID}
-              useConversations={Conversations.useActiveDirectConversations}
+              activeChannelID={activeChannelID}
+              conversations="direct"
             />
-            <Separator margin={[5, 0]} />
-            <List
-              activeConvID={activeChannelID}
-              useConversations={Conversations.useActiveGroupConversations}
+            <Separator
+              margin={[3, 3]}
+              style={{ borderTopWidth: 1, borderTopColor: "white" }}
             />
-            <Separator margin={[5, 0]} />
             <List
-              activeConvID={activeChannelID}
-              useConversations={Conversations.useActivePrivateConversations}
+              activeChannelID={activeChannelID}
+              conversations="group"
+            />
+            <Separator
+              margin={[3, 3]}
+              style={{ borderTopWidth: 1, borderTopColor: "white" }}
+            />
+            <List
+              activeChannelID={activeChannelID}
+              conversations="private"
             />
           </Box>
         </ScrollBox>

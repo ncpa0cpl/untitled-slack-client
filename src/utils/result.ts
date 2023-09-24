@@ -1,5 +1,3 @@
-import type { ConversationChannel } from "../quarks/slack/conversations";
-
 export type Ok<T> = { ok: true; value: T };
 
 export type Err<E> = { ok: false; error: E };
@@ -23,7 +21,7 @@ type MappedAsyncValues<T extends any[]> = number extends T["length"]
   : T extends [infer R, ...infer Rest]
   ? [
       R extends AsyncResult<infer T, any> ? T : never,
-      ...MappedAsyncValues<Rest>
+      ...MappedAsyncValues<Rest>,
     ]
   : [];
 
@@ -34,7 +32,7 @@ type MappedAsyncErrors<T extends any[]> = number extends T["length"]
   : T extends [infer R, ...infer Rest]
   ? [
       R extends AsyncResult<any, infer E> ? E : never,
-      ...MappedAsyncValues<Rest>
+      ...MappedAsyncValues<Rest>,
     ]
   : [];
 
@@ -43,12 +41,8 @@ type AsyncAllResult<T extends AsyncResult<any, any>[]> = AsyncResult<
   MappedAsyncErrors<T>
 >;
 
-type Test = AsyncResult<ConversationChannel>[];
-
-type T1 = number extends Test["length"] ? true : false;
-
 export const AsyncAll = async <R extends AsyncResult<any, any>[]>(
-  results: R
+  results: R,
 ): AsyncAllResult<R> => {
   const awaited = await Promise.all(results);
 

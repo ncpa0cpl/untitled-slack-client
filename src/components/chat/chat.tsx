@@ -1,7 +1,7 @@
 import React from "react";
 import { Align, Orientation, Paned } from "react-gjs-renderer";
-import type { SlackStore } from "../../quarks/slack/slack-client";
-import { SlackQuark } from "../../quarks/slack/slack-client";
+import type { SlackStore } from "../../quarks/slack/slack-quark";
+import { SlackQuark } from "../../quarks/slack/slack-quark";
 import { UserQuark } from "../../quarks/user";
 import { Component } from "../../utils/custom-component";
 import { Logger } from "../../utils/logger";
@@ -10,7 +10,8 @@ import { ConversationList } from "./sub-components/conversation-list/conversatio
 import { ConversationBox } from "./sub-components/conversation/conversation";
 
 const selectActiveWorkspaceService = (state: SlackStore) =>
-  state.workspaces.find((w) => w.team === state.activeWorkspace)?.service;
+  state.workspaces.find((w) => w.workspaceID === state.activeWorkspace)
+    ?.service;
 
 export class Chat extends Component {
   private slackService = $quark(this, SlackQuark, selectActiveWorkspaceService);
@@ -30,10 +31,7 @@ export class Chat extends Component {
 
       Logger.info("Retrieving channels.");
 
-      service.channels
-        .getAllConversations()
-        .then(() => service.channels.getConversationsInfo())
-        .catch(Logger.error);
+      service.channels.getAllConversations().catch(Logger.error);
     }, [this.slackService]);
   }
 
