@@ -32,6 +32,7 @@ export class Chat extends Component {
       Logger.info("Retrieving channels.");
 
       service.channels.getAllConversations().catch(Logger.error);
+      service.workspace.getAllEmoji().catch(Logger.error);
     }, [this.slackService]);
   }
 

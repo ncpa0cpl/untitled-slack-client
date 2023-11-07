@@ -10,7 +10,7 @@ import {
 import { useAsyncOperation } from "../../hooks/use-async-operation";
 import { navigate } from "../../main-stack";
 import { UserQuark } from "../../quarks/user";
-import { SlackService } from "../../services/slack-service/slack-service";
+import { SlackGatewayService } from "../../services/slack-service/slack-service";
 import { Logger } from "../../utils/logger";
 import { AppMarkup } from "../app-markup/app-markup";
 
@@ -37,10 +37,10 @@ const authOperation = async (args: AuthArg) => {
         return;
       }
 
-      return await SlackService.auth.logIn(team, email, password);
+      return await SlackGatewayService.auth.logIn(team, email, password);
     } else {
       const { team, token, userId } = args;
-      return await SlackService.auth.authorizeUser(team, token, userId);
+      return await SlackGatewayService.auth.authorizeUser(team, token, userId);
     }
   } catch (e) {
     Logger.error(e);

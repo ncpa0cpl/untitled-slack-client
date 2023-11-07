@@ -6,14 +6,10 @@ import { SlackQuark } from "../../../quarks/slack/slack-quark";
 import { Bound } from "../../../utils/decorators/bound";
 import type { AsyncResult } from "../../../utils/result";
 import { err, ok } from "../../../utils/result";
-import type { SlackService } from "../../slack-service/slack-service";
+import type { SlackGatewayService } from "../../slack-service/slack-service";
 import type { SlackMessage } from "../../slack-service/slack-types";
 import type { SlackChannelService } from "../channels-service";
-import type {
-  SlackMessageGroup,
-  SlackMessageGroupEntry,
-  WsSlackNotification,
-} from "./channel-types";
+import type { SlackMessageGroup, WsSlackNotification } from "./channel-types";
 
 function msgCompare(a: SlackMessage, b: SlackMessage) {
   return (a.timestamp ?? 0) - (b.timestamp ?? 0);
@@ -47,27 +43,13 @@ export class SlackChannel {
 
   constructor(
     private readonly channelService: SlackChannelService,
-    private readonly service: SlackService,
+    private readonly service: SlackGatewayService,
     private readonly ws: WebSocket,
     public readonly workspaceID: string,
     public readonly channelID: string,
   ) {
     this.loadMessages(undefined, true);
     this.ws.addEventListener("message", this.onWsEvent);
-
-    // let prevActive = this.channelService.activeChannel;
-    // this.activeChannelSub = this.channelService.on("changed", () => {
-    //   if (prevActive !== this.channelService.activeChannel) {
-    //     this.onActiveChannelChange(this.channelService.activeChannel);
-    //     prevActive = this.channelService.activeChannel;
-    //   }
-    // });
-
-    // this.interval = setInterval(() => this.flushUserTypings(), 1000);
-
-    // this.conversationInfo = Conversations.get().conversations.find(
-    //   (c) => c.id === channelID,
-    // );
   }
 
   @Bound()
@@ -88,6 +70,7 @@ export class SlackChannel {
               timestamp: Number(data.message.ts),
               userID: data.message.user,
               files: data.message.files ?? [],
+              reactions: [],
             };
             this.handleMessageChanged(msg);
             break;
@@ -99,6 +82,7 @@ export class SlackChannel {
               timestamp: Number(data.ts),
               userID: data.user,
               files: data.files ?? [],
+              reactions: [],
             };
             this.storeRemoveUserTyping(data.user);
             this.addNewMessage(msg);
@@ -133,7 +117,7 @@ export class SlackChannel {
 
   private storeUpdateMessage(
     messageID: string,
-    update: (prev: SlackMessageGroupEntry) => SlackMessageGroupEntry,
+    update: (prev: SlackMessage) => SlackMessage,
   ): void {
     SlackQuark.updateMessage(
       this.workspaceID,
@@ -188,6 +172,9 @@ export class SlackChannel {
         contents: msg.contents,
         files: msg.files,
         edited: true,
+        reactions: prev.reactions,
+        userID: prev.userID!,
+        username: prev.username as undefined,
       };
     });
   }

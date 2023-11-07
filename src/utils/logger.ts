@@ -28,7 +28,16 @@ const color = (
 const stringify = (v: any) => {
   switch (typeof v) {
     case "object":
-      return JSON.stringify(v);
+      return JSON.stringify(
+        v,
+        (k, v) => {
+          if (v instanceof Error) {
+            return `Error: ${v.message}\n\n${v.stack}`;
+          }
+          return v;
+        },
+        2,
+      );
     default:
       return String(v);
   }

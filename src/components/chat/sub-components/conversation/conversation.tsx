@@ -16,11 +16,8 @@ import type { WindowElement } from "react-gjs-renderer/dist/gjs-elements/rg-type
 import { $ChannelService } from "../../../../comp-modules/channel-service";
 import { UsersIndex } from "../../../../quarks/users-index";
 import type { WsEventMessage } from "../../../../services/channel-service/channel/channel-types";
-import { SlackService } from "../../../../services/slack-service/slack-service";
-import type {
-  MessageBlock,
-  MessageFile,
-} from "../../../../services/slack-service/slack-types";
+import { SlackGatewayService } from "../../../../services/slack-service/slack-service";
+import type { SlackMessage } from "../../../../services/slack-service/slack-types";
 import { Component } from "../../../../utils/custom-component";
 import { Bound } from "../../../../utils/decorators/bound";
 import { FontMod, FontSize } from "../../../font-size/font-size-context";
@@ -31,13 +28,7 @@ import { UserTyping } from "./user-typing";
 
 export type SlackMessageGroup = {
   id: string;
-  groups: Array<{
-    id: string;
-    contents?: MessageBlock[];
-    files: MessageFile[];
-    timestamp?: number;
-    edited?: true;
-  }>;
+  groups: Array<SlackMessage>;
 } & (
   | { userID: string; username?: undefined }
   | { userID?: undefined; username: string }
@@ -163,7 +154,7 @@ export class ConversationBox extends Component {
   @Bound()
   private async handleSend(text: string) {
     const channelID = this.activeChannel?.channelID;
-    const service = SlackService.getService();
+    const service = SlackGatewayService.getService();
 
     if (channelID && service) {
       await service.channels.sendMessage(channelID, text);

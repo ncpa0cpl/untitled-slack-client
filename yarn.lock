@@ -447,6 +447,11 @@ async-await-queue@^1.2.1:
   resolved "https://registry.yarnpkg.com/async-await-queue/-/async-await-queue-1.2.1.tgz#baf459f5fbac902b060a88fee4da853fd86f2128"
   integrity sha512-v2j+/EMzAnuJZ8I4570KJMFhi6G9g3WZyFh6cPnmQSJh3nLao77XpRt01kyFegQazPSKvue1yaIYDp/NfV/b0g==
 
+async-await-queue@^2.1.4:
+  version "2.1.4"
+  resolved "https://registry.yarnpkg.com/async-await-queue/-/async-await-queue-2.1.4.tgz#0c44a405cd31369b561f6ac663b74b4b4ffb99ad"
+  integrity sha512-3DpDtxkKO0O/FPlWbk/CrbexjuSxWm1CH1bXlVNVyMBIkKHhT5D85gzHmGJokG3ibNGWQ7pHBmStxUW/z/0LYQ==
+
 asynckit@^0.4.0:
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/asynckit/-/asynckit-0.4.0.tgz#c79ed97f7f34cb8f2ba1bc9790bcc366474b4b79"
@@ -1839,9 +1844,9 @@ react-better-components@^1.0.0:
   resolved "https://registry.yarnpkg.com/react-better-components/-/react-better-components-1.0.0.tgz#6696f4599d171315e594d15ede85e327b68ac6ca"
   integrity sha512-fG9fjsZKTsySizeN4pzCXaspG0w6XttwPNj7xEbnq1OEm3ahXQnUm/k/xPlx56D26yT5taAx76mSf++pexoIrw==
 
-react-gnome@ncpa0cpl/react-gnome#0.0.1-alpha-10:
+react-gnome@ncpa0cpl/react-gnome#0.0.1-alpha-11:
   version "1.0.0"
-  resolved "https://codeload.github.com/ncpa0cpl/react-gnome/tar.gz/14e2efd568bb73b26d8c9377a55e450c05d2251b"
+  resolved "https://codeload.github.com/ncpa0cpl/react-gnome/tar.gz/edd25a237d199b814bc7eb82c85f35c4465413d5"
   dependencies:
     buffer "^6.0.3"
     clify.js ncpa0cpl/clify.js#0.0.4

@@ -1,13 +1,13 @@
 import React from "react";
 import { Align, Label } from "react-gjs-renderer";
 import { UsersIndex } from "../../../../quarks/users-index";
-import { SlackService } from "../../../../services/slack-service/slack-service";
+import { SlackGatewayService } from "../../../../services/slack-service/slack-service";
 
 export const UserTyping = (props: { userID: string }) => {
   const userInfo = UsersIndex.useUser(props.userID);
 
   React.useEffect(() => {
-    const service = SlackService.getService();
+    const service = SlackGatewayService.getService();
     if (!userInfo && service) {
       service.users.getUser(props.userID);
     }
@@ -15,7 +15,10 @@ export const UserTyping = (props: { userID: string }) => {
 
   if (!userInfo) return <Label></Label>;
   return (
-    <Label horizontalAlign={Align.START} margin={[0, 5, 0]}>
+    <Label
+      horizontalAlign={Align.START}
+      margin={[0, 5, 0]}
+    >
       {userInfo.name} is typing.
     </Label>
   );

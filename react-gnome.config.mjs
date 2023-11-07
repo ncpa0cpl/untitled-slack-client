@@ -30,6 +30,7 @@ export default () => {
         path: true,
         os: true,
         querystring: true,
+        fs: true,
       },
     },
     customPolyfills: [
@@ -37,19 +38,15 @@ export default () => {
         filepath: "./polyfills/process.js",
       },
       {
+        filepath: "./polyfills/queue-microtask.js",
+      },
+      {
         filepath: "./polyfills/zlib.js",
         importName: "zlib",
       },
       {
-        filepath: "./polyfills/fs.js",
-        importName: "fs",
-      },
-      {
         filepath: "./polyfills/util.js",
         importName: "util",
-      },
-      {
-        filepath: "./polyfills/queue-microtask.js",
       },
     ],
     esbuildPlugins: [

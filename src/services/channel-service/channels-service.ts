@@ -1,5 +1,5 @@
 import { SlackQuark } from "../../quarks/slack/slack-quark";
-import type { SlackService } from "../slack-service/slack-service";
+import type { SlackGatewayService } from "../slack-service/slack-service";
 import { SlackChannel } from "./channel/channel";
 
 export class SlackChannelService {
@@ -20,7 +20,7 @@ export class SlackChannelService {
   }
 
   static createServiceForWorkspace(
-    service: SlackService,
+    service: SlackGatewayService,
     ws: WebSocket,
     workspaceID: string,
   ) {
@@ -54,7 +54,7 @@ export class SlackChannelService {
   private channels: Array<SlackChannel> = [];
 
   constructor(
-    private readonly service: SlackService,
+    private readonly service: SlackGatewayService,
     private readonly ws: WebSocket,
     public readonly workspaceID: string,
   ) {}

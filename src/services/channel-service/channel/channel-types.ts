@@ -1,7 +1,7 @@
 import type {
-  MessageBlock,
   MessageBlockRichText,
   MessageFile,
+  SlackMessage,
 } from "../../slack-service/slack-types";
 
 export type WsEventUserTyping = {
@@ -44,17 +44,9 @@ export type WsSlackNotification =
   | WsEventMessage
   | WsEventMessageChanged;
 
-export type SlackMessageGroupEntry = {
-  id: string;
-  contents?: MessageBlock[];
-  files: MessageFile[];
-  timestamp?: number;
-  edited?: true;
-};
-
 export type SlackMessageGroup = {
   id: string;
-  entries: Array<SlackMessageGroupEntry>;
+  entries: Array<SlackMessage>;
 } & (
   | { userID: string; username?: undefined }
   | { userID?: undefined; username: string }

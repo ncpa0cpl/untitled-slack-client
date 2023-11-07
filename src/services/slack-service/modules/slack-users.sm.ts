@@ -5,14 +5,14 @@ import { UsersIndex } from "../../../quarks/users-index";
 import { RequestError } from "../../../utils/errors/fetch-error";
 import type { AsyncResult } from "../../../utils/result";
 import { AsyncAll, err, ok } from "../../../utils/result";
-import type { SlackService } from "../slack-service";
+import type { SlackGatewayService } from "../slack-service";
 import type {
   UserProfilePictureBytes,
   UserProfilePictureLink,
 } from "../slack-types";
 
-export class SlackServiceUsersModule {
-  constructor(private readonly mainService: SlackService) {}
+export class SlackGatewayServiceUserModule {
+  constructor(private readonly mainService: SlackGatewayService) {}
 
   private get client() {
     return this.mainService.getClient();

@@ -1,7 +1,11 @@
 import GLib from "gi://GLib";
 
-export const queueMicrotask = (task) => {
+const queueMicrotask = (task) => {
   imports.mainloop.idle_add(() => {
     task();
   }, GLib.PRIORITY_DEFAULT);
+};
+
+export default {
+  queueMicrotask,
 };

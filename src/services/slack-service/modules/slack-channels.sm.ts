@@ -13,8 +13,12 @@ import { RequestError } from "../../../utils/errors/fetch-error";
 import { generateUID } from "../../../utils/generate-uid";
 import type { AsyncResult, Result } from "../../../utils/result";
 import { AsyncAll, err, ok } from "../../../utils/result";
-import type { SlackService } from "../slack-service";
-import type { MessageFile, SlackMessage } from "../slack-types";
+import type { SlackGatewayService } from "../slack-service";
+import type {
+  MessageFile,
+  SlackMessage,
+  SlackMessageReaction,
+} from "../slack-types";
 
 export type ConversationChannel = {
   id: string;
@@ -58,8 +62,8 @@ type FetchedMessages = {
   cursor?: string;
 };
 
-export class SlackServiceChannelsModule {
-  constructor(private readonly mainService: SlackService) {}
+export class SlackGatewayServiceChannelModule {
+  constructor(private readonly mainService: SlackGatewayService) {}
 
   private get client() {
     return this.mainService.getClient();
@@ -234,6 +238,14 @@ export class SlackServiceChannelsModule {
 
     for (const message of response.messages ?? []) {
       const timestamp = message.ts ? Number(message.ts) : undefined;
+      const reactions = (message.reactions ?? [])
+        .filter((r) => r.name != null)
+        .map((r): SlackMessageReaction => {
+          return {
+            emojiID: r.name!,
+            count: r.count ?? 1,
+          };
+        });
 
       if (!message.user) {
         result.push({
@@ -242,6 +254,7 @@ export class SlackServiceChannelsModule {
           timestamp: timestamp,
           username: message.username ?? message.bot_profile?.name ?? "",
           files: message.files ?? [],
+          reactions,
         });
         continue;
       }
@@ -252,6 +265,7 @@ export class SlackServiceChannelsModule {
         timestamp: timestamp,
         userID: message.user,
         files: message.files ?? [],
+        reactions,
       });
     }
 

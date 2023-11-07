@@ -1,14 +1,15 @@
 import type { WebClient } from "@slack/web-api";
 import type { AxiosInstance } from "axios";
 import { SlackQuark } from "../../quarks/slack/slack-quark";
-import { SlackServiceAuthorizationModule } from "./modules/slack-authorization-service";
-import { SlackServiceChannelsModule } from "./modules/slack-channels-service";
-import { SlackServiceUsersModule } from "./modules/slack-users-service";
+import { SlackGatewayServiceAuthModule } from "./modules/slack-authorization.sm";
+import { SlackGatewayServiceChannelModule } from "./modules/slack-channels.sm";
+import { SlackGatewayServiceUserModule } from "./modules/slack-users.sm";
+import { SlackGatewayServiceWorkspaceModule } from "./modules/slack-workspace.sm";
 
-export class SlackService {
-  static auth = new SlackServiceAuthorizationModule();
+export class SlackGatewayService {
+  static auth = new SlackGatewayServiceAuthModule();
 
-  static getService(team?: string): SlackService | undefined {
+  static getService(team?: string): SlackGatewayService | undefined {
     const state = SlackQuark.get();
 
     if (team) {
@@ -24,9 +25,11 @@ export class SlackService {
     public readonly workspaceID: string,
   ) {}
 
-  users = new SlackServiceUsersModule(this);
+  users = new SlackGatewayServiceUserModule(this);
 
-  channels = new SlackServiceChannelsModule(this);
+  channels = new SlackGatewayServiceChannelModule(this);
+
+  workspace = new SlackGatewayServiceWorkspaceModule(this);
 
   getClient() {
     return this.client;

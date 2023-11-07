@@ -2,11 +2,11 @@ import type { WebClient } from "@slack/web-api";
 import { createImmerMiddleware, quark } from "react-quarks";
 import type {
   SlackMessageGroup,
-  SlackMessageGroupEntry,
   UserTypingInfo,
 } from "../../services/channel-service/channel/channel-types";
 import { SlackChannelService } from "../../services/channel-service/channels-service";
-import { SlackService } from "../../services/slack-service/slack-service";
+import { SlackGatewayService } from "../../services/slack-service/slack-service";
+import type { SlackMessage } from "../../services/slack-service/slack-types";
 
 export enum ConversationType {
   Direct = "im",
@@ -37,12 +37,12 @@ export type SlackStore = {
   workspaces: Array<{
     workspaceID: string;
     channels: Array<ChannelData>;
-    service: SlackService;
+    service: SlackGatewayService;
     socket: WebSocket;
   }>;
 };
 
-export type MessageToAdd = SlackMessageGroupEntry & {
+export type MessageToAdd = SlackMessage & {
   userID?: string;
   username?: string;
 };
@@ -62,7 +62,7 @@ export const SlackQuark = quark(
         client: WebClient,
         ws: WebSocket,
       ) {
-        const service = new SlackService(client, workspaceID);
+        const service = new SlackGatewayService(client, workspaceID);
 
         SlackChannelService.createServiceForWorkspace(service, ws, workspaceID);
 
@@ -166,7 +166,7 @@ export const SlackQuark = quark(
         workspaceID: string,
         channelID: string,
         messageID: string,
-        update: (prev: SlackMessageGroupEntry) => SlackMessageGroupEntry,
+        update: (prev: SlackMessage) => SlackMessage,
       ) {
         const channel = state.workspaces
           .find((e) => e.workspaceID === workspaceID)

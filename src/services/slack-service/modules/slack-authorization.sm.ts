@@ -34,7 +34,7 @@ export class AuthorizationError extends Error {
   }
 }
 
-export class SlackServiceAuthorizationModule {
+export class SlackGatewayServiceAuthModule {
   private createClient(token?: string): AsyncResult<WebClient> {
     const client = new WebClient(token, {
       maxRequestConcurrency: 10,

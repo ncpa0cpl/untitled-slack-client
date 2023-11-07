@@ -122,23 +122,19 @@ export type MessageBlock =
 
 export type MessageFile = FileElement;
 
-export type SlackMessage =
-  | {
-      id: string;
-      contents?: MessageBlock[];
-      userID: string;
-      username?: undefined;
-      timestamp?: number;
-      files: MessageFile[];
-    }
-  | {
-      id: string;
-      contents?: MessageBlock[];
-      userID?: undefined;
-      username: string;
-      timestamp?: number;
-      files: MessageFile[];
-    };
+export type SlackMessageReaction = { emojiID: string; count: number };
+
+export type SlackMessage = {
+  id: string;
+  contents?: MessageBlock[];
+  timestamp?: number;
+  files: MessageFile[];
+  reactions: Array<SlackMessageReaction>;
+  edited?: true;
+} & (
+  | { userID: string; username?: undefined }
+  | { userID?: undefined; username: string }
+);
 
 export type UserProfilePictureLink = {
   link: string;
